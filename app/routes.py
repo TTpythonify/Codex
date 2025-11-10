@@ -44,6 +44,7 @@ def home():
         resp = github.get("/user")
         if resp.ok:
             user_data = resp.json()
+            print(f"\n{user_data}\n")
             return render_template("home_page.html", user=user_data)
     except Exception as e:
         print(f"Error fetching user data: {e}")

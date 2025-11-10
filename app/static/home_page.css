@@ -79,6 +79,7 @@ body {
     cursor: pointer;
     padding: 8px;
     transition: color 0.2s ease;
+    font-size: 12px;
 }
 
 .dropdown-btn:hover {
@@ -252,6 +253,11 @@ body {
     }
 }
 
+.welcome-content {
+    position: relative;
+    z-index: 1;
+}
+
 .welcome-content h1 {
     font-size: 32px;
     margin-bottom: 8px;
@@ -268,114 +274,10 @@ body {
 .welcome-content p {
     color: #8b949e;
     font-size: 16px;
-    margin-bottom: 24px;
 }
 
-.quick-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.action-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.action-btn.primary {
-    background: #238636;
-    color: white;
-}
-
-.action-btn.primary:hover {
-    background: #2ea043;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
-}
-
-.action-btn.secondary {
-    background: rgba(48, 54, 61, 0.8);
-    color: #c9d1d9;
-    border: 1px solid #30363d;
-}
-
-.action-btn.secondary:hover {
-    background: rgba(48, 54, 61, 1);
-    border-color: #58a6ff;
-    transform: translateY(-2px);
-}
-
-/* Stats Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-}
-
-.stat-card {
-    background: rgba(22, 27, 34, 0.8);
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-4px);
-    border-color: #58a6ff;
-    box-shadow: 0 8px 24px rgba(88, 166, 255, 0.1);
-}
-
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
-.stat-icon.repositories {
-    background: linear-gradient(135deg, #58a6ff 0%, #4a8fe7 100%);
-}
-
-.stat-icon.followers {
-    background: linear-gradient(135deg, #bc8cff 0%, #a577e8 100%);
-}
-
-.stat-icon.following {
-    background: linear-gradient(135deg, #56d364 0%, #46b354 100%);
-}
-
-.stat-icon.gists {
-    background: linear-gradient(135deg, #f78166 0%, #e06c53 100%);
-}
-
-.stat-info h3 {
-    font-size: 28px;
-    color: #f0f6fc;
-    margin-bottom: 4px;
-}
-
-.stat-info p {
-    color: #8b949e;
-    font-size: 14px;
-}
-
-/* Recent Section */
-.recent-section {
+/* Repositories Section - Horizontal Scroll */
+.repos-section {
     background: rgba(22, 27, 34, 0.8);
     border: 1px solid #30363d;
     border-radius: 12px;
@@ -392,6 +294,150 @@ body {
 .section-header h2 {
     font-size: 20px;
     color: #f0f6fc;
+}
+
+.create-repo-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #238636;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.create-repo-btn:hover {
+    background: #2ea043;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+}
+
+.repos-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 0 -24px;
+    padding: 0 24px;
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #0d1117;
+}
+
+.repos-scroll-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.repos-scroll-container::-webkit-scrollbar-track {
+    background: #0d1117;
+    border-radius: 4px;
+}
+
+.repos-scroll-container::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 4px;
+}
+
+.repos-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}
+
+.repos-grid {
+    display: flex;
+    gap: 16px;
+    padding-bottom: 8px;
+}
+
+.repo-card {
+    min-width: 320px;
+    max-width: 320px;
+    background: rgba(48, 54, 61, 0.3);
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.repo-card:hover {
+    transform: translateY(-4px);
+    border-color: #58a6ff;
+    box-shadow: 0 8px 24px rgba(88, 166, 255, 0.15);
+    background: rgba(48, 54, 61, 0.5);
+}
+
+.repo-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.repo-icon {
+    color: #58a6ff;
+    flex-shrink: 0;
+}
+
+.repo-name {
+    font-size: 16px;
+    color: #f0f6fc;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.repo-description {
+    color: #8b949e;
+    font-size: 14px;
+    line-height: 1.5;
+    flex-grow: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.repo-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #30363d;
+}
+
+.repo-stats {
+    display: flex;
+    gap: 16px;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #8b949e;
+    font-size: 13px;
+}
+
+.stat svg {
+    opacity: 0.7;
+}
+
+.repo-time {
+    color: #6e7681;
+    font-size: 12px;
+}
+
+/* Recent Activity Section */
+.recent-section {
+    background: rgba(22, 27, 34, 0.8);
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px;
 }
 
 .view-all {
@@ -463,6 +509,165 @@ body {
     font-size: 13px;
 }
 
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.modal-header h2 {
+    font-size: 20px;
+    color: #f0f6fc;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(248, 81, 73, 0.1);
+    color: #f85149;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #f0f6fc;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #c9d1d9;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: #238636;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2ea043;
+}
+
+.btn-secondary {
+    background: rgba(48, 54, 61, 0.8);
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+}
+
+.btn-secondary:hover {
+    background: rgba(48, 54, 61, 1);
+    border-color: #58a6ff;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .main-container {
@@ -472,6 +677,11 @@ body {
     .sidebar {
         position: relative;
         top: 0;
+    }
+
+    .repo-card {
+        min-width: 280px;
+        max-width: 280px;
     }
 }
 
@@ -492,16 +702,27 @@ body {
         font-size: 24px;
     }
 
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+    .repos-section {
+        padding: 20px 16px;
     }
 
-    .quick-actions {
-        flex-direction: column;
+    .repos-scroll-container {
+        margin: 0 -16px;
+        padding: 0 16px;
     }
 
-    .action-btn {
-        width: 100%;
-        justify-content: center;
+    .repo-card {
+        min-width: 260px;
+        max-width: 260px;
+    }
+
+    .create-repo-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .create-repo-btn svg {
+        width: 14px;
+        height: 14px;
     }
 }
