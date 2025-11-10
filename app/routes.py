@@ -51,6 +51,8 @@ def home():
     
     return redirect(url_for("main.login_page"))
 
+
+
 # Logout route
 @main_routes.route("/logout")
 def logout():
