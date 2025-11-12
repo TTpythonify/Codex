@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from dotenv import load_dotenv
-from app.routes import main_routes
+from .modules.routes import main_routes
 from flask_dance.contrib.github import make_github_blueprint
 
 

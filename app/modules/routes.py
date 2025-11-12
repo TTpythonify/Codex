@@ -8,9 +8,8 @@ main_routes = Blueprint("main", __name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# -----------------------------
-# Home / login page
-# -----------------------------
+
+
 @main_routes.route("/")
 def login_page():
     logger.info("Rendering login page...")
@@ -24,9 +23,7 @@ def login_page():
             logger.error(f"Error checking GitHub authorization: {e}")
     return render_template("login_page.html")
 
-# -----------------------------
-# Test OAuth route
-# -----------------------------
+
 @main_routes.route("/test-oauth")
 def test_oauth():
     logger.info("Accessing test OAuth route...")
@@ -45,9 +42,7 @@ def test_oauth():
             "error": str(e)
         })
 
-# -----------------------------
-# Home page after login
-# -----------------------------
+
 @main_routes.route("/home")
 def home():
     logger.info("Accessing home page...")
@@ -93,26 +88,19 @@ def home():
         logger.error(f"Error fetching or saving user data: {e}")
         return redirect(url_for("main.login_page"))
 
-# -----------------------------
-# Logout
-# -----------------------------
+
 @main_routes.route("/logout")
 def logout():
     logger.info("Logging out user and clearing session...")
     session.clear()
     return redirect(url_for("main.login_page"))
 
-# -----------------------------
-# Authorized redirect
-# -----------------------------
 @main_routes.route("/authorized")
 def authorized():
     logger.info("Authorized route hit. Redirecting to home...")
     return redirect(url_for("main.home"))
 
-# -----------------------------
-# Create GitHub repo
-# -----------------------------
+
 @main_routes.route("/create_repo", methods=["POST"])
 def create_repo():
     logger.info("Creating a new GitHub repository...")
@@ -178,3 +166,46 @@ def create_repo():
     except Exception as e:
         logger.error(f"Exception during repository creation: {e}")
         return jsonify({"message": "Error creating repository", "error": str(e)}), 500
+    
+
+
+# -----------------------------
+# Repository page
+# -----------------------------
+@main_routes.route("/repo/<int:repo_id>")
+def repo_page(repo_id):
+    logger.info(f"Accessing repository page for repo ID: {repo_id}")
+    if not github.authorized:
+        logger.info("User not authorized, redirecting to login page.")
+        return redirect(url_for("main.login_page"))
+
+    try:
+        # Get user data
+        resp = github.get("/user")
+        if not resp.ok:
+            raise Exception("Failed to fetch user data from GitHub")
+        user_data = resp.json()
+        username = user_data['login']
+
+        # Find the repository in the user's repos
+        user_doc = user_collection.find_one({"username": username})
+        if not user_doc:
+            logger.error(f"User {username} not found in database")
+            return redirect(url_for("main.home"))
+
+        repo = None
+        for r in user_doc.get("repos", []):
+            if r["id"] == repo_id:
+                repo = r
+                break
+
+        if not repo:
+            logger.error(f"Repository with ID {repo_id} not found for user {username}")
+            return redirect(url_for("main.home"))
+
+        logger.info(f"Rendering repository page for: {repo['name']}")
+        return render_template("code_editor.html", repo=repo, user=user_doc)
+
+    except Exception as e:
+        logger.error(f"Error accessing repository page: {e}")
+        return redirect(url_for("main.home"))

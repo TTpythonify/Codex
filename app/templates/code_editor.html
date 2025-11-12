@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ repo.name }} - Editor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/code_editor.css') }}">
+</head>
+<body>
+    <h1>{{ repo.name }}</h1>
+    <p>Owner: {{ user.username }}</p>
+
+    <div id="editor"></div>
+
+
+
+    <script src="https://unpkg.com/monaco-editor@0.39.0/min/vs/loader.js"></script>
+    <script src="{{ url_for('static', filename='js/code_editor.js') }}"></script>
+</body>
+</html>
