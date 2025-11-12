@@ -158,7 +158,7 @@ def create_repo():
             }
             user_collection.update_one({"username": username}, {"$push": {"repos": repo_doc}})
             logger.info(f"✅ Repository '{name}' added to MongoDB for user '{username}'")
-            return jsonify({"message": "Repository created successfully!", "repo": repo_doc}), 201
+            
         else:
             logger.error(f"❌ Failed to create repository: {response.json()}")
             return jsonify({"message": "Failed to create repository", "details": response.json()}), response.status_code
@@ -209,3 +209,16 @@ def repo_page(repo_id):
     except Exception as e:
         logger.error(f"Error accessing repository page: {e}")
         return redirect(url_for("main.home"))
+    
+
+
+@main_routes.route("/run_code", methods=["POST"])
+def run_code():
+    logger.info("Code is being processed\n")
+
+    data = request.get_json()
+    code = data.get("code", "")
+    logger.info(f"\n\nCode :{code}\n\n")
+    return jsonify({"message": "Code ran", "data": code}), 201
+
+    

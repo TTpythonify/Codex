@@ -16,16 +16,34 @@ require(['vs/editor/editor.main'], function () {
         wordWrap: 'on'
     });
 
-    // Attach Run Code button handler here
+    // Attach Run Code button handler
     const runCodeBtn = document.getElementById('runCodeBtn');
     if (runCodeBtn) {
         runCodeBtn.addEventListener('click', () => {
-            const code = editorInstance.getValue();
+            if (!editorInstance) {
+                console.log('Editor not ready yet');
+                return;
+            }
 
-            // Optional: show alert
-            alert('Check console for code output!');
-            console.log('Running code:');
+            const code = editorInstance.getValue();
+            console.log('Sending code to backend:');
             console.log(code);
+
+            // POST code to backend
+            fetch('/run_code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Log output and errors from backend
+                console.log(data);
+                
+            })
+            .catch(err => console.error('Error sending code:', err));
         });
     }
+
+
 });
