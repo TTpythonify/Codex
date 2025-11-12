@@ -15,9 +15,8 @@
             </div>
             <div class="nav-right">
                 <div class="user-menu">
-                    <!-- BACKEND: Replace with user data from Flask session/database -->
                     <img src="{{ user.avatar_url }}" alt="Avatar" class="user-avatar">
-                    <span class="username">{{ user.login }}</span>
+                    <span class="username">{{ user.username }}</span>
                     <div class="dropdown">
                         <button class="dropdown-btn">▼</button>
                         <div class="dropdown-content">
@@ -52,19 +51,9 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h3>Projects</h3>
-                <!-- BACKEND: Trigger modal to create new project -->
                 <button class="new-project-btn" id="newProjectBtn">+</button>
             </div>
             <div class="project-list" id="projectList">
-                <!-- BACKEND: Loop through user's projects from database -->
-                <!-- Example structure for each project:
-                <div class="project-item active" data-project-id="1">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                    </svg>
-                    <span>Project Name</span>
-                </div>
-                -->
                 <div class="project-item active" data-project-id="1">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
@@ -91,8 +80,7 @@
             <!-- Welcome Section -->
             <section class="welcome-section">
                 <div class="welcome-content">
-                    <!-- BACKEND: Replace with user's name from database -->
-                    <h1>Welcome back, <span class="highlight">{{ user.name or user.login }}</span>! 👋</h1>
+                    <h1>Welcome back, <span class="highlight">{{ user.username }}</span>! 👋</h1>
                     <p>Ready to collaborate on something amazing today?</p>
                 </div>
             </section>
@@ -101,7 +89,6 @@
             <section class="repos-section">
                 <div class="section-header">
                     <h2>Your Repositories</h2>
-                    <!-- BACKEND: Trigger create repository modal/form -->
                     <button class="create-repo-btn" id="createRepoBtn">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M7.75 0a.75.75 0 01.75.75V7h6.25a.75.75 0 010 1.5H8.5v6.25a.75.75 0 01-1.5 0V8.5H.75a.75.75 0 010-1.5H7V.75A.75.75 0 017.75 0z"/>
@@ -111,177 +98,57 @@
                 </div>
                 <div class="repos-scroll-container">
                     <div class="repos-grid" id="reposGrid">
-                        <!-- BACKEND: Loop through repositories from database/API -->
-                        <!-- Example structure for each repo card:
-                        <div class="repo-card" data-repo-id="1">
-                            <div class="repo-header">
-                                <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-                                </svg>
-                                <h3 class="repo-name">Repository Name</h3>
-                            </div>
-                            <p class="repo-description">Repository description goes here</p>
-                            <div class="repo-footer">
-                                <div class="repo-stats">
-                                    <span class="stat">
-                                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M5.5 3.5a2 2 0 100 4 2 2 0 000-4zM2 5.5a3.5 3.5 0 115.898 2.549 5.507 5.507 0 013.034 4.084.75.75 0 11-1.482.235 4.001 4.001 0 00-7.9 0 .75.75 0 01-1.482-.236A5.507 5.507 0 013.102 8.05 3.49 3.49 0 012 5.5z"/>
-                                        </svg>
-                                        3 collaborators
-                                    </span>
+                        {% if user.repos %}
+                            {% for repo in user.repos %}
+                            <div class="repo-card" data-repo-id="{{ repo.id }}">
+                                <div class="repo-header">
+                                    <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
+                                    </svg>
+                                    <h3 class="repo-name">{{ repo.name }}</h3>
                                 </div>
-                                <span class="repo-time">2 hours ago</span>
-                            </div>
-                        </div>
-                        -->
-                        <div class="repo-card" data-repo-id="1">
-                            <div class="repo-header">
-                                <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-                                </svg>
-                                <h3 class="repo-name">My First Project</h3>
-                            </div>
-                            <p class="repo-description">A collaborative coding project for learning</p>
-                            <div class="repo-footer">
-                                <div class="repo-stats">
-                                    <span class="stat">
-                                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M5.5 3.5a2 2 0 100 4 2 2 0 000-4zM2 5.5a3.5 3.5 0 115.898 2.549 5.507 5.507 0 013.034 4.084.75.75 0 11-1.482.235 4.001 4.001 0 00-7.9 0 .75.75 0 01-1.482-.236A5.507 5.507 0 013.102 8.05 3.49 3.49 0 012 5.5z"/>
-                                        </svg>
-                                        3 collaborators
-                                    </span>
+                                <p class="repo-description">{{ repo.description or 'No description provided' }}</p>
+                                <div class="repo-footer">
+                                    <div class="repo-stats">
+                                        <span class="stat">
+                                            {% if repo.private %}
+                                            🔒 Private
+                                            {% else %}
+                                            🔓 Public
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <span class="repo-time">{{ repo.created_at }}</span>
                                 </div>
-                                <span class="repo-time">2 hours ago</span>
                             </div>
-                        </div>
-
-                        <div class="repo-card" data-repo-id="2">
-                            <div class="repo-header">
-                                <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-                                </svg>
-                                <h3 class="repo-name">Website Redesign</h3>
-                            </div>
-                            <p class="repo-description">New company website with modern UI</p>
-                            <div class="repo-footer">
-                                <div class="repo-stats">
-                                    <span class="stat">
-                                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M5.5 3.5a2 2 0 100 4 2 2 0 000-4zM2 5.5a3.5 3.5 0 115.898 2.549 5.507 5.507 0 013.034 4.084.75.75 0 11-1.482.235 4.001 4.001 0 00-7.9 0 .75.75 0 01-1.482-.236A5.507 5.507 0 013.102 8.05 3.49 3.49 0 012 5.5z"/>
-                                        </svg>
-                                        5 collaborators
-                                    </span>
+                            {% endfor %}
+                        {% else %}
+                            <div class="repo-card" data-repo-id="4">
+                                <div class="repo-header">
+                                    <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
+                                    </svg>
+                                    <h3 class="repo-name">No Repositories Yet</h3>
                                 </div>
-                                <span class="repo-time">5 hours ago</span>
-                            </div>
-                        </div>
-
-                        <div class="repo-card" data-repo-id="3">
-                            <div class="repo-header">
-                                <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-                                </svg>
-                                <h3 class="repo-name">API Integration</h3>
-                            </div>
-                            <p class="repo-description">Backend API development and testing</p>
-                            <div class="repo-footer">
-                                <div class="repo-stats">
-                                    <span class="stat">
-                                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M5.5 3.5a2 2 0 100 4 2 2 0 000-4zM2 5.5a3.5 3.5 0 115.898 2.549 5.507 5.507 0 013.034 4.084.75.75 0 11-1.482.235 4.001 4.001 0 00-7.9 0 .75.75 0 01-1.482-.236A5.507 5.507 0 013.102 8.05 3.49 3.49 0 012 5.5z"/>
-                                        </svg>
-                                        2 collaborators
-                                    </span>
+                                <p class="repo-description">Create your first repository to get started!</p>
+                                <div class="repo-footer">
+                                    <div class="repo-stats">
+                                        <span class="stat">
+                                            Click "New Repository" above
+                                        </span>
+                                    </div>
+                                    <span class="repo-time">Just now</span>
                                 </div>
-                                <span class="repo-time">1 day ago</span>
                             </div>
-                        </div>
-
-                        <div class="repo-card" data-repo-id="4">
-                            <div class="repo-header">
-                                <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-                                </svg>
-                                <h3 class="repo-name">Mobile App</h3>
-                            </div>
-                            <p class="repo-description">Cross-platform mobile application</p>
-                            <div class="repo-footer">
-                                <div class="repo-stats">
-                                    <span class="stat">
-                                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                                            <path d="M5.5 3.5a2 2 0 100 4 2 2 0 000-4zM2 5.5a3.5 3.5 0 115.898 2.549 5.507 5.507 0 013.034 4.084.75.75 0 11-1.482.235 4.001 4.001 0 00-7.9 0 .75.75 0 01-1.482-.236A5.507 5.507 0 013.102 8.05 3.49 3.49 0 012 5.5z"/>
-                                        </svg>
-                                        4 collaborators
-                                    </span>
-                                </div>
-                                <span class="repo-time">3 days ago</span>
-                            </div>
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </section>
-
-            <!-- Recent Activity -->
-            <section class="recent-section">
-                <div class="section-header">
-                    <h2>Recent Activity</h2>
-                    <a href="#" class="view-all">View All →</a>
-                </div>
-                <div class="activity-list" id="activityList">
-                    <!-- BACKEND: Loop through recent activities from database -->
-                    <!-- Example structure:
-                    <div class="activity-item">
-                        <div class="activity-icon edit">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 000-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 00-.064.108l-.558 1.953 1.953-.558a.249.249 0 00.108-.064l6.286-6.286z"/>
-                            </svg>
-                        </div>
-                        <div class="activity-content">
-                            <h4>Activity Title</h4>
-                            <p>Activity description • time ago</p>
-                        </div>
-                    </div>
-                    -->
-                    <div class="activity-item">
-                        <div class="activity-icon edit">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 000-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 00-.064.108l-.558 1.953 1.953-.558a.249.249 0 00.108-.064l6.286-6.286z"/>
-                            </svg>
-                        </div>
-                        <div class="activity-content">
-                            <h4>Edited index.html</h4>
-                            <p>Updated navbar component • 2 hours ago</p>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon commit">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M11.93 8.5a4.002 4.002 0 01-7.86 0H.75a.75.75 0 010-1.5h3.32a4.002 4.002 0 017.86 0h3.32a.75.75 0 010 1.5h-3.32zM8 6a2 2 0 100 4 2 2 0 000-4z"/>
-                            </svg>
-                        </div>
-                        <div class="activity-content">
-                            <h4>Pushed to main branch</h4>
-                            <p>3 commits • 5 hours ago</p>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon create">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M7.75 0a.75.75 0 01.75.75V7h6.25a.75.75 0 010 1.5H8.5v6.25a.75.75 0 01-1.5 0V8.5H.75a.75.75 0 010-1.5H7V.75A.75.75 0 017.75 0z"/>
-                            </svg>
-                        </div>
-                        <div class="activity-content">
-                            <h4>Created new repository</h4>
-                            <p>portfolio-website • Yesterday</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            
         </main>
     </div>
 
     <!-- Create Repository Modal -->
-    <!-- BACKEND: Handle form submission to create new repository -->
     <div class="modal" id="createRepoModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -293,18 +160,36 @@
                     <label for="repoName">Repository Name</label>
                     <input type="text" id="repoName" name="repoName" required placeholder="my-awesome-project">
                 </div>
+
                 <div class="form-group">
                     <label for="repoDescription">Description (optional)</label>
                     <textarea id="repoDescription" name="repoDescription" rows="3" placeholder="A short description of your repository"></textarea>
                 </div>
+
+                <div class="form-group visibility-group">
+                    <label>Visibility</label>
+                    <div class="visibility-options">
+                        <label class="visibility-option">
+                            <input type="radio" name="repoVisibility" value="public" checked>
+                            <span class="option-label">🔓 Public</span>
+                        </label>
+
+                        <label class="visibility-option">
+                            <input type="radio" name="repoVisibility" value="private">
+                            <span class="option-label">🔒 Private</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
                     <button type="submit" class="btn-primary">Create Repository</button>
                 </div>
             </form>
+
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='home.js') }}"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>

@@ -153,8 +153,11 @@ body {
     border-radius: 12px;
     padding: 20px;
     height: fit-content;
+    max-height: calc(100vh - 120px);
     position: sticky;
     top: 88px;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar-header {
@@ -162,6 +165,7 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+    flex-shrink: 0;
 }
 
 .sidebar-header h3 {
@@ -190,6 +194,29 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #0d1117;
+}
+
+.project-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.project-list::-webkit-scrollbar-track {
+    background: #0d1117;
+    border-radius: 3px;
+}
+
+.project-list::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+.project-list::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
 }
 
 .project-item {
@@ -276,12 +303,13 @@ body {
     font-size: 16px;
 }
 
-/* Repositories Section - Horizontal Scroll */
+/* Repositories Section - FIXED HORIZONTAL SCROLL */
 .repos-section {
     background: rgba(22, 27, 34, 0.8);
     border: 1px solid #30363d;
     border-radius: 12px;
     padding: 24px;
+    overflow: hidden; /* Prevent section from expanding */
 }
 
 .section-header {
@@ -317,11 +345,13 @@ body {
     box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
 }
 
+/* FIXED: Horizontal scroll container */
 .repos-scroll-container {
     overflow-x: auto;
     overflow-y: hidden;
     margin: 0 -24px;
-    padding: 0 24px;
+    padding: 0 24px 16px 24px;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #30363d #0d1117;
 }
@@ -344,15 +374,16 @@ body {
     background: #484f58;
 }
 
+/* FIXED: Use inline-flex to enable horizontal scrolling */
 .repos-grid {
-    display: flex;
+    display: inline-flex;
     gap: 16px;
-    padding-bottom: 8px;
+    min-width: min-content;
 }
 
 .repo-card {
-    min-width: 320px;
-    max-width: 320px;
+    flex: 0 0 auto;
+    width: 320px;
     background: rgba(48, 54, 61, 0.3);
     border: 1px solid #30363d;
     border-radius: 12px;
@@ -520,13 +551,13 @@ body {
     height: 100%;
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(4px);
-    animation: fadeIn 0.2s ease;
 }
 
 .modal.active {
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: fadeIn 0.2s ease;
 }
 
 @keyframes fadeIn {
@@ -630,6 +661,36 @@ body {
     min-height: 80px;
 }
 
+/* Visibility section */
+.visibility-group {
+    margin-top: 10px;
+}
+.visibility-options {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+.visibility-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    font-size: 13px;
+}
+.visibility-option:hover {
+    background: #30363d;
+    border-color: #58a6ff;
+}
+.option-label {
+    color: #c9d1d9;
+    font-weight: 500;
+}
+
 .modal-actions {
     display: flex;
     gap: 12px;
@@ -680,8 +741,7 @@ body {
     }
 
     .repo-card {
-        min-width: 280px;
-        max-width: 280px;
+        width: 280px;
     }
 }
 
@@ -708,12 +768,11 @@ body {
 
     .repos-scroll-container {
         margin: 0 -16px;
-        padding: 0 16px;
+        padding: 0 16px 16px 16px;
     }
 
     .repo-card {
-        min-width: 260px;
-        max-width: 260px;
+        width: 260px;
     }
 
     .create-repo-btn {
