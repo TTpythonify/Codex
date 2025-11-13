@@ -3,6 +3,7 @@ from flask_dance.contrib.github import github
 from .database import *
 import logging
 import requests
+import subprocess, tempfile, os, uuid
 
 main_routes = Blueprint("main", __name__)
 logging.basicConfig(level=logging.INFO)
@@ -209,16 +210,33 @@ def repo_page(repo_id):
     except Exception as e:
         logger.error(f"Error accessing repository page: {e}")
         return redirect(url_for("main.home"))
-    
+
+
+
 
 
 @main_routes.route("/run_code", methods=["POST"])
 def run_code():
-    logger.info("Code is being processed\n")
+    logger.info("Code execution requested")
 
+    # Get code from frontend
     data = request.get_json()
     code = data.get("code", "")
-    logger.info(f"\n\nCode :{code}\n\n")
-    return jsonify({"message": "Code ran", "data": code}), 201
+    if not code.strip():
+        return jsonify({"error": "No code provided"}), 400
+
+    try:
+        # Send code to sandbox service
+        sandbox_url = "http://sandbox:8000/run"  # service name in docker-compose
+        response = requests.post(sandbox_url, json={"code": code}, timeout=10)
+        response.raise_for_status()
+        result = response.json().get("output", "")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error sending code to sandbox: {e}")
+        result = f"Error: Could not execute code. {str(e)}"
+
+    # Return output or error to frontend
+    return jsonify({"output": result})
 
     

@@ -26,10 +26,8 @@ require(['vs/editor/editor.main'], function () {
             }
 
             const code = editorInstance.getValue();
-            console.log('Sending code to backend:');
-            console.log(code);
+            console.log('Sending code to backend:\n', code);
 
-            // POST code to backend
             fetch('/run_code', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -37,13 +35,12 @@ require(['vs/editor/editor.main'], function () {
             })
             .then(response => response.json())
             .then(data => {
-                // Log output and errors from backend
-                console.log(data);
-                
+                console.log('=== Code Output ===\n', data.output);
             })
             .catch(err => console.error('Error sending code:', err));
         });
     }
+
 
 
 });
