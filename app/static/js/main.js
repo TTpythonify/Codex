@@ -1,3 +1,4 @@
+console.log("I am here ")
 // GitHub Login Button Handler
 document.addEventListener('DOMContentLoaded', () => {
     const githubLoginBtn = document.getElementById('githubLoginBtn');

@@ -212,7 +212,7 @@ def repo_page(repo_id):
         return redirect(url_for("main.home"))
 
 
-
+PISTON_URL = os.getenv("PISTON_URL", "http://piston:2000")
 
 
 @main_routes.route("/run_code", methods=["POST"])
@@ -222,21 +222,69 @@ def run_code():
     # Get code from frontend
     data = request.get_json()
     code = data.get("code", "")
+    
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
 
+    # Basic validation
+    if len(code) > 50000:  # 50KB limit
+        return jsonify({"error": "Code too long (max 50KB)"}), 400
+
+    # Piston API format
+    execution_data = {
+        "language": "python",
+        "version": "3.10.0",
+        "files": [
+            {
+                "name": "main.py",
+                "content": code
+            }
+        ],
+        "stdin": "",
+        "args": [],
+        "compile_timeout": 10000,  # 10 seconds
+        "run_timeout": 3000,       # 3 seconds
+        "compile_memory_limit": -1,
+        "run_memory_limit": -1
+    }
+
     try:
-        # Send code to sandbox service
-        sandbox_url = "http://sandbox:8000/run"  # service name in docker-compose
-        response = requests.post(sandbox_url, json={"code": code}, timeout=10)
+        # Send code to Piston service
+        response = requests.post(
+            f"{PISTON_URL}/api/v2/execute",
+            json=execution_data,
+            timeout=15
+        )
         response.raise_for_status()
-        result = response.json().get("output", "")
+        result = response.json()
 
+        # Get output
+        run_result = result.get("run", {})
+        stdout = run_result.get("stdout", "")
+        stderr = run_result.get("stderr", "")
+
+        # Combine outputs
+        output = stdout if stdout else (stderr if stderr else "No output")
+
+        # Check for errors
+        if run_result.get("code") != 0:
+            output = f"Error (exit code {run_result.get('code')}):\n{output}"
+
+        logger.info(f"Code executed successfully. Exit code: {run_result.get('code')}")
+        
+        return jsonify({
+            "output": output,
+            "success": run_result.get("code") == 0
+        })
+
+    except requests.exceptions.Timeout:
+        logger.error("Piston execution timeout")
+        return jsonify({"error": "Execution timeout (max 15 seconds)"}), 408
+        
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error sending code to sandbox: {e}")
-        result = f"Error: Could not execute code. {str(e)}"
-
-    # Return output or error to frontend
-    return jsonify({"output": result})
-
-    
+        logger.error(f"Error communicating with Piston: {e}")
+        return jsonify({"error": f"Could not execute code: {str(e)}"}), 500
+        
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500

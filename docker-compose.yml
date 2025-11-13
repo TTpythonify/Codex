@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   backend:
     build:
@@ -6,17 +8,18 @@ services:
     ports:
       - "5000:5000"
     env_file:
-      - .env
+      - .env  # This loads the .env file
     depends_on:
-      - sandbox
+      - piston
 
-  sandbox:
-    build:
-      context: .          # Root folder as context
-      dockerfile: sandbox/Dockerfile
+  piston:
+    image: ghcr.io/engineer-man/piston:latest
     ports:
-      - "8000:8000"
+      - "2000:2000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      - piston-packages:/piston/packages
+    tmpfs:
+      - /piston/jobs:exec,uid=1000,gid=1000,mode=711
+
+volumes:
+  piston-packages:

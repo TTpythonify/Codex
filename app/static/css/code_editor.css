@@ -395,3 +395,80 @@ body {
         display: none;
     }
 }
+
+/* ... keep all your existing styles ... */
+
+/* Terminal Panel */
+.terminal-panel {
+    height: 250px;
+    background: #0d1117;
+    border-top: 1px solid #30363d;
+    display: flex;
+    flex-direction: column;
+    resize: vertical;
+    overflow: hidden;
+}
+
+.terminal-header {
+    background: rgba(22, 27, 34, 0.95);
+    border-bottom: 1px solid #30363d;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.terminal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f0f6fc;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.terminal-title svg {
+    color: #58a6ff;
+}
+
+.terminal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.terminal-action-btn {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.terminal-action-btn:hover {
+    background: rgba(48, 54, 61, 0.5);
+    color: #58a6ff;
+}
+
+#terminal {
+    flex: 1;
+    padding: 8px;
+    overflow: hidden;
+}
+
+/* Update editor area to accommodate terminal */
+#editor {
+    flex: 1;
+    width: 100%;
+    min-height: 300px;
+}
+
+/* Terminal closed state */
+.terminal-panel.closed {
+    height: 0;
+    border: none;
+}
