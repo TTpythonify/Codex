@@ -3,7 +3,7 @@ from flask_dance.contrib.github import github
 from .database import *
 import logging
 import requests
-import subprocess, tempfile, os, uuid
+import json
 
 main_routes = Blueprint("main", __name__)
 logging.basicConfig(level=logging.INFO)
@@ -215,6 +215,7 @@ def repo_page(repo_id):
 PISTON_URL = os.getenv("PISTON_URL", "http://piston:2000")
 
 
+
 @main_routes.route("/run_code", methods=["POST"])
 def run_code():
     logger.info("Code execution requested")
@@ -222,6 +223,12 @@ def run_code():
     # Get code from frontend
     data = request.get_json()
     code = data.get("code", "")
+    
+    print("\n" + "="*60)
+    print("📝 CODE RECEIVED:")
+    print("="*60)
+    print(code)
+    print("="*60 + "\n")
     
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
@@ -248,6 +255,9 @@ def run_code():
         "run_memory_limit": -1
     }
 
+    print("🚀 Sending request to Piston API...")
+    print(f"   URL: {PISTON_URL}/api/v2/execute")
+    
     try:
         # Send code to Piston service
         response = requests.post(
@@ -258,33 +268,61 @@ def run_code():
         response.raise_for_status()
         result = response.json()
 
+        print("\n" + "="*60)
+        print("📦 PISTON RAW RESPONSE:")
+        print("="*60)
+        print(json.dumps(result, indent=2))
+        print("="*60 + "\n")
+
         # Get output
         run_result = result.get("run", {})
         stdout = run_result.get("stdout", "")
         stderr = run_result.get("stderr", "")
+        exit_code = run_result.get("code", 0)
+
+        print("="*60)
+        print("📊 PARSED RESULTS:")
+        print("="*60)
+        print(f"Exit Code: {exit_code}")
+        print(f"STDOUT:\n{stdout if stdout else '(empty)'}")
+        print(f"STDERR:\n{stderr if stderr else '(empty)'}")
+        print("="*60 + "\n")
 
         # Combine outputs
         output = stdout if stdout else (stderr if stderr else "No output")
 
         # Check for errors
-        if run_result.get("code") != 0:
-            output = f"Error (exit code {run_result.get('code')}):\n{output}"
+        if exit_code != 0:
+            output = f"Error (exit code {exit_code}):\n{output}"
 
-        logger.info(f"Code executed successfully. Exit code: {run_result.get('code')}")
+        logger.info(f"Code executed with exit code: {exit_code}")
         
-        return jsonify({
+        response_data = {
             "output": output,
-            "success": run_result.get("code") == 0
-        })
+            "success": exit_code == 0
+        }
+        
+        print("="*60)
+        print("✉️ RESPONSE TO FRONTEND:")
+        print("="*60)
+        print(json.dumps(response_data, indent=2))
+        print("="*60 + "\n")
+        
+        return jsonify(response_data)
 
     except requests.exceptions.Timeout:
         logger.error("Piston execution timeout")
+        print("❌ ERROR: Piston execution timeout")
         return jsonify({"error": "Execution timeout (max 15 seconds)"}), 408
         
     except requests.exceptions.RequestException as e:
         logger.error(f"Error communicating with Piston: {e}")
+        print(f"❌ ERROR: Could not communicate with Piston: {e}")
         return jsonify({"error": f"Could not execute code: {str(e)}"}), 500
         
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
+        print(f"❌ UNEXPECTED ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500

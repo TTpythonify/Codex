@@ -3,45 +3,14 @@ require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.39.0/min/vs' 
 let editorInstance = null;
 let terminal = null;
 
-// Load Monaco Editor
-require(['vs/editor/editor.main'], function () {
-    // Create the editor
-    editorInstance = monaco.editor.create(document.getElementById('editor'), {
-        value: '',
-        language: 'python',
-        theme: 'vs-dark',
-        automaticLayout: true,
-        fontSize: 14,
-        minimap: { enabled: true },
-        scrollBeyondLastLine: false,
-        wordWrap: 'on'
-    });
-
-    // Initialize xterm.js terminal
-    initTerminal();
-
-    // Attach Run Code button handler
-    const runCodeBtn = document.getElementById('runCodeBtn');
-    if (runCodeBtn) {
-        runCodeBtn.addEventListener('click', runCode);
+// Initialize xterm.js terminal first (before Monaco loads)
+function initTerminal() {
+    // Check if Terminal is available
+    if (typeof Terminal === 'undefined') {
+        console.error('xterm.js not loaded! Terminal constructor not found.');
+        return;
     }
 
-    // Terminal controls
-    document.getElementById('clearTerminal').addEventListener('click', () => {
-        if (terminal) {
-            terminal.clear();
-        }
-    });
-
-    document.getElementById('closeTerminal').addEventListener('click', () => {
-        const terminalPanel = document.querySelector('.terminal-panel');
-        terminalPanel.classList.toggle('closed');
-        // Trigger editor resize
-        setTimeout(() => editorInstance.layout(), 100);
-    });
-});
-
-function initTerminal() {
     terminal = new Terminal({
         cursorBlink: true,
         fontSize: 14,
@@ -76,9 +45,54 @@ function initTerminal() {
     terminal.writeln('Ready to execute code...\n');
 }
 
+// Initialize Terminal immediately when script loads
+initTerminal();
+
+// Load Monaco Editor
+require(['vs/editor/editor.main'], function () {
+    // Create the editor
+    editorInstance = monaco.editor.create(document.getElementById('editor'), {
+        value: '# Write your Python code here\nprint("Hello, CODEX!")\n',
+        language: 'python',
+        theme: 'vs-dark',
+        automaticLayout: true,
+        fontSize: 14,
+        minimap: { enabled: true },
+        scrollBeyondLastLine: false,
+        wordWrap: 'on'
+    });
+
+    // Attach Run Code button handler
+    const runCodeBtn = document.getElementById('runCodeBtn');
+    if (runCodeBtn) {
+        runCodeBtn.addEventListener('click', runCode);
+    }
+
+    // Terminal controls
+    document.getElementById('clearTerminal').addEventListener('click', () => {
+        if (terminal) {
+            terminal.clear();
+            terminal.writeln('\x1b[1;36mCODEX Terminal\x1b[0m');
+            terminal.writeln('Ready to execute code...\n');
+        }
+    });
+
+    document.getElementById('closeTerminal').addEventListener('click', () => {
+        const terminalPanel = document.querySelector('.terminal-panel');
+        terminalPanel.classList.toggle('closed');
+        // Trigger editor resize
+        setTimeout(() => editorInstance.layout(), 100);
+    });
+});
+
 function runCode() {
     if (!editorInstance) {
-        console.log('Editor not ready yet');
+        console.error('Editor not ready yet');
+        return;
+    }
+
+    if (!terminal) {
+        console.error('Terminal not initialized');
         return;
     }
 

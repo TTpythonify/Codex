@@ -184,9 +184,10 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/monaco-editor@0.39.0/min/vs/loader.js"></script>
-    <!-- Add xterm.js library -->
+    <!-- IMPORTANT: Load xterm.js BEFORE your custom script -->
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://unpkg.com/monaco-editor@0.39.0/min/vs/loader.js"></script>
     <script src="{{ url_for('static', filename='js/code_editor.js') }}"></script>
+
 </body>
 </html>
