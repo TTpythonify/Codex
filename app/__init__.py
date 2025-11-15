@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from dotenv import load_dotenv
 from .modules.routes import main_routes
+from .modules.repository.routes import repo_routes
 from flask_dance.contrib.github import make_github_blueprint
 
 
@@ -18,8 +19,7 @@ def create_app():
         scope="repo"
     )
     app.register_blueprint(github_bp, url_prefix="/login")
-
-    # Register your own routes
     app.register_blueprint(main_routes)
+    app.register_blueprint(repo_routes)
 
     return app
