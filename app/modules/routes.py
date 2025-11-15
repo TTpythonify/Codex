@@ -1,12 +1,15 @@
 from flask import Blueprint, render_template, redirect, url_for, session, jsonify, request
 from flask_dance.contrib.github import github
 from .database import *
+import logging
+import datetime
+
+
 
 
 main_routes = Blueprint("main", __name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 
 @main_routes.route("/")
@@ -50,42 +53,62 @@ def home():
         return redirect(url_for("main.login_page"))
 
     try:
+        # Fetch GitHub user data
         resp = github.get("/user")
         if not resp.ok:
             raise Exception("Failed to fetch user data from GitHub")
         user_data = resp.json()
-        logger.info(f"GitHub user data fetched: {user_data.get('login')}")
-        session["username"] = user_data['login']
+        github_id = user_data['id']
+        github_username = user_data['login']
 
-        existing_user = user_collection.find_one({"id": user_data['id']})
+        logger.info(f"GitHub user data fetched: {github_username}")
+        session["username"] = github_username
+
+        # Look for user in DB
+        existing_user = user_collection.find_one({"github_id": github_id})
         if existing_user:
-            logger.info(f"Existing user found: {user_data['login']}. Updating info...")
+            logger.info(f"Existing user found: {github_username}. Updating info...")
             user_collection.update_one(
-                {"id": user_data['id']},
+                {"github_id": github_id},
                 {"$set": {
-                    "username": user_data['login'],
+                    "username": github_username,
                     "html_url": user_data['html_url'],
-                    "avatar_url": user_data['avatar_url']
+                    "avatar_url": user_data['avatar_url'],
+                    "updated_at": datetime.datetime.utcnow()
                 }}
             )
-            user_doc = existing_user
+            user_doc = user_collection.find_one({"github_id": github_id})
         else:
-            logger.info(f"Creating new user in MongoDB: {user_data['login']}")
+            logger.info(f"Creating new user in MongoDB: {github_username}")
             insert_result = user_collection.insert_one({
-                "id": user_data['id'],
-                "username": user_data['login'],
+                "github_id": github_id,
+                "username": github_username,
                 "html_url": user_data['html_url'],
                 "avatar_url": user_data['avatar_url'],
-                "repos": []
+                "created_at": datetime.datetime.utcnow(),
+                "updated_at": datetime.datetime.utcnow()
             })
             user_doc = user_collection.find_one({"_id": insert_result.inserted_id})
 
-        logger.info(f"Rendering home page for user: {user_doc['username']}")
-        return render_template("home_page.html", user=user_doc)
+        # Fetch all repositories for this user
+        repos_cursor = repositories_collection.find({"user_id": user_doc["_id"]})
+        repos = []
+        for repo in repos_cursor:
+            # Convert ObjectId and datetime for safe display in template
+            repo["_id"] = str(repo["_id"])
+            if isinstance(repo.get("created_at"), datetime.datetime):
+                repo["created_at"] = repo["created_at"].strftime("%Y-%m-%d")
+            if isinstance(repo.get("updated_at"), datetime.datetime):
+                repo["updated_at"] = repo["updated_at"].strftime("%Y-%m-%d")
+            repos.append(repo)
+
+        logger.info(f"Rendering home page for user: {user_doc['username']} with {len(repos)} repositories")
+        return render_template("home_page.html", user=user_doc, repos=repos)
 
     except Exception as e:
         logger.error(f"Error fetching or saving user data: {e}")
         return redirect(url_for("main.login_page"))
+
 
 
 @main_routes.route("/logout")
@@ -93,6 +116,7 @@ def logout():
     logger.info("Logging out user and clearing session...")
     session.clear()
     return redirect(url_for("main.login_page"))
+
 
 @main_routes.route("/authorized")
 def authorized():

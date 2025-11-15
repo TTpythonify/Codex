@@ -1,132 +1,174 @@
-from flask import Blueprint, render_template, redirect, url_for, session, jsonify, request
+from flask import Blueprint, jsonify, request,render_template,redirect,url_for
 from flask_dance.contrib.github import github
 from ..database import *
 import logging
 import requests
+import datetime
 import json
+from bson import ObjectId
 
 repo_routes = Blueprint("repo", __name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+PISTON_URL = os.getenv("PISTON_URL", "http://piston:2000")
 
 
+# -----------------------------
+# Helper to serialize Mongo documents with ObjectId
+# -----------------------------
+def serialize_doc(doc):
+    """
+    Convert ObjectId fields in a dict to strings so it can be JSONified.
+    """
+    doc_copy = {}
+    for k, v in doc.items():
+        if isinstance(v, ObjectId):
+            doc_copy[k] = str(v)
+        elif isinstance(v, datetime.datetime):
+            doc_copy[k] = v.isoformat()
+        else:
+            doc_copy[k] = v
+    return doc_copy
 
 
+# -----------------------------
+# Create a new repository
+# -----------------------------
 @repo_routes.route("/create_repo", methods=["POST"])
 def create_repo():
-    logger.info("Creating a new GitHub repository...")
+    logger.info("Creating a new repository...")
+    
     if not github.authorized:
-        logger.error("User not authenticated with GitHub")
         return jsonify({"message": "User not authenticated with GitHub"}), 401
 
     token = github.token.get("access_token") if github.token else None
     if not token:
-        logger.error("Invalid GitHub token")
         return jsonify({"message": "Invalid GitHub token"}), 401
 
     data = request.get_json()
-    name = data.get("name")
+    repo_name = data.get("name")
     description = data.get("description", "")
     private = data.get("private", False)
 
-    if not name:
-        logger.error("Repository name not provided")
+    if not repo_name:
         return jsonify({"message": "Repository name is required"}), 400
 
     try:
+        # Get GitHub user info
         user_resp = github.get("/user")
         if not user_resp.ok:
             raise Exception("Failed to fetch GitHub user details")
         user_data = user_resp.json()
-        username = user_data["login"]
+        github_username = user_data["login"]
 
-        existing_user = user_collection.find_one({"username": username})
-        if existing_user:
-            existing_repos = existing_user.get("repos", [])
-            for repo in existing_repos:
-                if repo["name"].lower() == name.lower():
-                    logger.warning(f"Repository '{name}' already exists for user '{username}'")
-                    return jsonify({"message": f"Repository '{name}' already exists for this user"}), 409
+        # Find user in DB
+        user_doc = user_collection.find_one({"username": github_username})
+        if not user_doc:
+            return jsonify({"message": "User not found in database"}), 404
 
-        logger.info(f"Creating repository on GitHub: {name}")
-        
+        # Check if repo already exists for this user
+        existing_repo = repositories_collection.find_one({
+            "user_id": user_doc["_id"],
+            "name": {"$regex": f"^{repo_name}$", "$options": "i"}
+        })
+        if existing_repo:
+            return jsonify({"message": f"Repository '{repo_name}' already exists"}), 409
+
+        # Create repository on GitHub
         headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
-        payload = {"name": name, "description": description, "private": private}
+        payload = {"name": repo_name, "description": description, "private": private}
         response = requests.post("https://api.github.com/user/repos", headers=headers, json=payload)
-        logger.info(f"GitHub API response status: {response.status_code}")
 
-        if response.status_code == 201:
-            repo_data = response.json()
-            repo_doc = {
-                "id": repo_data["id"],
-                "name": repo_data["name"],
-                "full_name": repo_data["full_name"],
-                "html_url": repo_data["html_url"],
-                "description": repo_data.get("description"),
-                "private": repo_data["private"],
-                "members": [],
-                "created_at": repo_data["created_at"]
-            }
-            user_collection.update_one({"username": username}, {"$push": {"repos": repo_doc}})
-            logger.info(f"✅ Repository '{name}' added to MongoDB for user '{username}'")
-            
-        else:
-            logger.error(f"❌ Failed to create repository: {response.json()}")
-            return jsonify({"message": "Failed to create repository", "details": response.json()}), response.status_code
+        if response.status_code != 201:
+            return jsonify({"message": "Failed to create repository on GitHub", "details": response.json()}), response.status_code
+
+        # Save repo in DB
+        repo_data = response.json()
+        repo_doc = {
+            "user_id": user_doc["_id"],
+            "github_id": repo_data["id"],
+            "name": repo_data["name"],
+            "full_name": repo_data["full_name"],
+            "html_url": repo_data["html_url"],
+            "description": repo_data.get("description"),
+            "private": repo_data["private"],
+            "created_at": datetime.datetime.strptime(repo_data["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
+            "updated_at": datetime.datetime.utcnow()
+        }
+        insert_result = repositories_collection.insert_one(repo_doc)
+
+        # Fetch the saved document and serialize ObjectIds
+        saved_repo = repositories_collection.find_one({"_id": insert_result.inserted_id})
+        saved_repo_serialized = serialize_doc(saved_repo)
+
+        logger.info(f"Repository '{repo_name}' added to DB for user '{github_username}'")
+
+        return jsonify({
+            "message": f"Repository '{repo_name}' created successfully",
+            "repo": saved_repo_serialized
+        }), 201
 
     except Exception as e:
-        logger.error(f"Exception during repository creation: {e}")
+        logger.error(f"Error creating repository: {e}")
         return jsonify({"message": "Error creating repository", "error": str(e)}), 500
-    
 
 
 # -----------------------------
-# Repository page
+# Access a repository page
 # -----------------------------
-@repo_routes.route("/repo/<int:repo_id>")
+
+@repo_routes.route("/repo/<repo_id>")
 def repo_page(repo_id):
-    logger.info(f"Accessing repository page for repo ID: {repo_id}")
+    logger.info(f"Accessing repository page: {repo_id}")
+
     if not github.authorized:
-        logger.info("User not authorized, redirecting to login page.")
         return redirect(url_for("main.login_page"))
 
     try:
-        # Get user data
-        resp = github.get("/user")
-        if not resp.ok:
-            raise Exception("Failed to fetch user data from GitHub")
-        user_data = resp.json()
-        username = user_data['login']
+        # Get GitHub user info
+        user_resp = github.get("/user")
+        if not user_resp.ok:
+            raise Exception("Failed to fetch GitHub user data")
+        github_username = user_resp.json()["login"]
 
-        # Find the repository in the user's repos
-        user_doc = user_collection.find_one({"username": username})
+        # Find user in DB
+        user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
-            logger.error(f"User {username} not found in database")
             return redirect(url_for("main.home"))
 
-        repo = None
-        for r in user_doc.get("repos", []):
-            if r["id"] == repo_id:
-                repo = r
-                break
+        # Convert repo_id to ObjectId
+        repo_obj_id = ObjectId(repo_id)
 
-        if not repo:
-            logger.error(f"Repository with ID {repo_id} not found for user {username}")
+        # Find repository owned by this user
+        repo_doc = repositories_collection.find_one({
+            "_id": repo_obj_id,
+            "user_id": user_doc["_id"]
+        })
+        if not repo_doc:
             return redirect(url_for("main.home"))
 
-        logger.info(f"Rendering repository page for: {repo['name']}")
-        return render_template("code_editor.html", repo=repo, user=user_doc)
+        # Fetch all files in this repo
+        files = list(files_collection.find({"repo_id": repo_doc["_id"]}))
+
+        # Prepare file data for frontend
+        files_data = [{
+            "id": str(f["_id"]),
+            "path": f["path"],
+            "language": f["language"],
+            "content": f["content"]
+        } for f in files]
+
+        return render_template(
+            "code_editor.html",
+            repo=repo_doc,
+            user=user_doc,
+            files=files_data
+        )
 
     except Exception as e:
         logger.error(f"Error accessing repository page: {e}")
         return redirect(url_for("main.home"))
-
-
-
-
-PISTON_URL = os.getenv("PISTON_URL", "http://piston:2000")
-
 
 
 

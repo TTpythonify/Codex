@@ -5,7 +5,6 @@ from .modules.routes import main_routes
 from .modules.repository.routes import repo_routes
 from flask_dance.contrib.github import make_github_blueprint
 
-
 load_dotenv()
 
 def create_app():

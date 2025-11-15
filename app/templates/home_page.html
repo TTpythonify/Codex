@@ -99,9 +99,9 @@
                 </div>
                 <div class="repos-scroll-container">
                     <div class="repos-grid" id="reposGrid">
-                        {% if user.repos %}
-                            {% for repo in user.repos %}
-                            <div class="repo-card" data-repo-id="{{ repo.id }}">
+                        {% if repos %}
+                            {% for repo in repos %}
+                            <div class="repo-card" data-repo-id="{{ repo._id }}">
                                 <div class="repo-header">
                                     <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
                                         <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
@@ -124,7 +124,7 @@
                             </div>
                             {% endfor %}
                         {% else %}
-                            <div class="repo-card" data-repo-id="4">
+                            <div class="repo-card" data-repo-id="0">
                                 <div class="repo-header">
                                     <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
                                         <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
@@ -134,15 +134,14 @@
                                 <p class="repo-description">Create your first repository to get started!</p>
                                 <div class="repo-footer">
                                     <div class="repo-stats">
-                                        <span class="stat">
-                                            Click "New Repository" above
-                                        </span>
+                                        <span class="stat">Click "New Repository" above</span>
                                     </div>
                                     <span class="repo-time">Just now</span>
                                 </div>
                             </div>
                         {% endif %}
                     </div>
+
                 </div>
             </section>
             

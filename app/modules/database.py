@@ -27,6 +27,10 @@ try:
 
     db = client["Codex"]
     user_collection = db["codex_users"]
+    repositories_collection = db["codex_repositories"]
+    files_collection = db["codex_files"]
+
+    
 
     client.admin.command("ping")
     logger.info("✓ Successfully connected to MongoDB Atlas (Production Mode)")
