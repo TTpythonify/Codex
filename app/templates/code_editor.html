@@ -8,9 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
 </head>
 <body>
-    <!-- Hidden repo ID for JavaScript -->
-    <input type="hidden" id="repoId" value="{{ repo_id }}">
-
+   <input type="hidden" id="repoId" value="{{ repo._id }}">
     <!-- Top Navigation Bar -->
     <nav class="navbar">
         <div class="nav-left">
@@ -137,49 +135,58 @@
     </div>
 
     <!-- Create File Modal -->
-    <div class="modal" id="createFileModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>
-                    <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25V1.75zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6h-2.75A1.75 1.75 0 019 4.25V1.5H3.75zm6.75.062V4.25c0 .138.112.25.25.25h2.688a.252.252 0 00-.011-.013l-2.914-2.914a.272.272 0 00-.013-.011z"/>
-                    </svg>
-                    Create New File
-                </h2>
-                <button class="modal-close">
-                    <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
-                    </svg>
-                </button>
+<!-- Create File Modal -->
+<div class="modal" id="createFileModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25V1.75zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6h-2.75A1.75 1.75 0 019 4.25V1.5H3.75zm6.75.062V4.25c0 .138.112.25.25.25h2.688a.252.252 0 00-.011-.013l-2.914-2.914a.272.272 0 00-.013-.011z"/>
+                </svg>
+                Create New File
+            </h2>
+            <button class="modal-close" id="closeFileModal">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="newFileName">File Name</label>
+                <input type="text" id="newFileName" placeholder="e.g., main, app, index" autocomplete="off">
+                <small>Enter the file name without extension (extension will be added automatically)</small>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="newFileName">File Name</label>
-                    <input type="text" id="newFileName" placeholder="e.g., main.py, app.js, index.html" autocomplete="off">
-                    <small>The appropriate file extension will be added automatically</small>
-                </div>
-                <div class="form-group">
-                    <label for="fileLanguage">Language</label>
-                    <select id="fileLanguage">
-                        <option value="python">Python (.py)</option>
-                        <option value="javascript">JavaScript (.js)</option>
-                        <option value="java">Java (.java)</option>
-                        <option value="cpp">C++ (.cpp)</option>
-                        <option value="c">C (.c)</option>
-                    </select>
-                </div>
+            <div class="form-group">
+                <label for="fileLanguage">Language</label>
+                <select id="fileLanguage">
+                    <option value="python">Python (.py)</option>
+                    <option value="javascript">JavaScript (.js)</option>
+                    <option value="java">Java (.java)</option>
+                    <option value="cpp">C++ (.cpp)</option>
+                    <option value="c">C (.c)</option>
+                </select>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-cancel">Cancel</button>
-                <button class="btn btn-primary" id="createFileBtn">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M7.75 2a.75.75 0 01.75.75V7h4.25a.75.75 0 010 1.5H8.5v4.25a.75.75 0 01-1.5 0V8.5H2.75a.75.75 0 010-1.5H7V2.75A.75.75 0 017.75 2z"/>
-                    </svg>
-                    Create File
-                </button>
+            <div class="form-group">
+                <label for="parentFileSelect">Create Inside</label>
+                <select id="parentFileSelect">
+                    <option value="">📁 Root (top level)</option>
+                    <!-- JavaScript will populate folders here -->
+                </select>
+                <small>Select a folder to create this file inside it, or choose Root for top level</small>
             </div>
         </div>
+        <div class="modal-footer">
+            <button class="btn btn-cancel" id="cancelFileBtn">Cancel</button>
+            <button class="btn btn-primary" id="createFileBtn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M7.75 2a.75.75 0 01.75.75V7h4.25a.75.75 0 010 1.5H8.5v4.25a.75.75 0 01-1.5 0V8.5H2.75a.75.75 0 010-1.5H7V2.75A.75.75 0 017.75 2z"/>
+                </svg>
+                Create File
+            </button>
+        </div>
     </div>
+</div>
 
     <!-- Create Folder Modal -->
     <div class="modal" id="createFolderModal">
@@ -191,7 +198,7 @@
                     </svg>
                     Create New Folder
                 </h2>
-                <button class="modal-close">
+                <button class="modal-close" id="closeFolderModal">
                     <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
                     </svg>
@@ -203,9 +210,18 @@
                     <input type="text" id="newFolderName" placeholder="e.g., src, utils, components" autocomplete="off">
                     <small>Choose a descriptive name for your folder</small>
                 </div>
+                <!-- NEW DROPDOWN FIELD FOR PARENT SELECTION -->
+                <div class="form-group">
+                    <label for="parentFolderSelect">Create Inside</label>
+                    <select id="parentFolderSelect">
+                        <option value="">📁 Root (top level)</option>
+                        <!-- JavaScript will populate existing folders here -->
+                    </select>
+                    <small>Select a folder to nest this inside it, or choose Root for top level</small>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-cancel">Cancel</button>
+                <button class="btn btn-cancel" id="cancelFolderBtn">Cancel</button>
                 <button class="btn btn-primary" id="createFolderBtn">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M7.75 2a.75.75 0 01.75.75V7h4.25a.75.75 0 010 1.5H8.5v4.25a.75.75 0 01-1.5 0V8.5H2.75a.75.75 0 010-1.5H7V2.75A.75.75 0 017.75 2z"/>

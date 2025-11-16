@@ -683,3 +683,57 @@ body {
 #repoId {
     display: none;
 }
+
+/* File Tree Styling */
+.file-tree-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    user-select: none;
+}
+
+.file-tree-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.file-tree-item.folder {
+    font-weight: 500;
+}
+
+.file-tree-item.expanded {
+    color: #58a6ff;
+}
+
+.file-tree-item .tree-icon {
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.tree-children {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    margin-left: 8px;
+}
+
+/* Modal Dropdown Styling */
+#parentFolderSelect {
+    width: 100%;
+    padding: 8px;
+    background-color: #0d1117;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#parentFolderSelect:focus {
+    outline: none;
+    border-color: #58a6ff;
+}
+
+#parentFolderSelect option {
+    padding: 8px;
+}
