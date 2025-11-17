@@ -110,6 +110,93 @@ def home():
         return redirect(url_for("main.login_page"))
 
 
+@main_routes.route("/public_repositories")
+def public_repositories():
+
+    logger.info("Accessing home page...")
+    if not github.authorized:
+        logger.info("User not authorized, redirecting to login page.")
+        return redirect(url_for("main.login_page"))
+
+    try:
+        # Fetch GitHub user data
+        resp = github.get("/user")
+        if not resp.ok:
+            raise Exception("Failed to fetch user data from GitHub")
+        user_data = resp.json()
+        github_id = user_data['id']
+        github_username = user_data['login']
+
+        logger.info(f"GitHub user data fetched: {github_username}")
+        session["username"] = github_username
+
+        # Look for user in DB
+        existing_user = user_collection.find_one({"github_id": github_id})
+        if existing_user:
+            logger.info(f"Existing user found: {github_username}. Updating info...")
+            user_collection.update_one(
+                {"github_id": github_id},
+                {"$set": {
+                    "username": github_username,
+                    "html_url": user_data['html_url'],
+                    "avatar_url": user_data['avatar_url'],
+                    "updated_at": datetime.datetime.utcnow()
+                }}
+            )
+            user_doc = user_collection.find_one({"github_id": github_id})
+
+        logger.info(f"Rendering home page for user: {user_doc['username']}")
+        return render_template("public_repositories.html", user=user_doc)    
+
+    except Exception as e:
+        logger.error(f"Error fetching or saving user data: {e}")
+        return redirect(url_for("main.login_page"))
+
+
+
+@main_routes.route("/activity_feed")
+def activity_feed():
+
+    logger.info("Accessing home page...")
+    if not github.authorized:
+        logger.info("User not authorized, redirecting to login page.")
+        return redirect(url_for("main.login_page"))
+
+    try:
+        # Fetch GitHub user data
+        resp = github.get("/user")
+        if not resp.ok:
+            raise Exception("Failed to fetch user data from GitHub")
+        user_data = resp.json()
+        github_id = user_data['id']
+        github_username = user_data['login']
+
+        logger.info(f"GitHub user data fetched: {github_username}")
+        session["username"] = github_username
+
+        # Look for user in DB
+        existing_user = user_collection.find_one({"github_id": github_id})
+        if existing_user:
+            logger.info(f"Existing user found: {github_username}. Updating info...")
+            user_collection.update_one(
+                {"github_id": github_id},
+                {"$set": {
+                    "username": github_username,
+                    "html_url": user_data['html_url'],
+                    "avatar_url": user_data['avatar_url'],
+                    "updated_at": datetime.datetime.utcnow()
+                }}
+            )
+            user_doc = user_collection.find_one({"github_id": github_id})
+
+        logger.info(f"Rendering home page for user: {user_doc['username']}")
+        return render_template("activity_feed.html", user=user_doc)   
+    
+
+    except Exception as e:
+        logger.error(f"Error fetching or saving user data: {e}")
+        return redirect(url_for("main.login_page"))
+
 
 @main_routes.route("/logout")
 def logout():

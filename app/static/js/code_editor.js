@@ -4,8 +4,8 @@ let editorInstance = null;
 let terminal = null;
 
 // Tab Management System
-let openTabs = []; // Array of open file tabs
-let activeTabId = null; // ID of currently active tab
+let openTabs = []; 
+let activeTabId = null; 
 
 // Initialize xterm.js terminal first (before Monaco loads)
 function initTerminal() {
@@ -65,7 +65,6 @@ require(['vs/editor/editor.main'], function () {
         wordWrap: 'on'
     });
 
-    // Track content changes for unsaved indicator
     editorInstance.onDidChangeModelContent(() => {
         if (activeTabId) {
             const tab = openTabs.find(t => t.id === activeTabId);
@@ -158,7 +157,6 @@ function loadTabIntoEditor(tab) {
     
     editorInstance.setValue(tab.content || '');
     
-    // Map language to Monaco language
     const languageMap = {
         'python': 'python',
         'javascript': 'javascript',
@@ -193,11 +191,9 @@ function closeTab(tabId, event) {
     // If closing active tab, switch to another
     if (activeTabId === tabId) {
         if (openTabs.length > 0) {
-            // Switch to next tab or previous if at end
             const nextTab = openTabs[Math.min(tabIndex, openTabs.length - 1)];
             switchToTab(nextTab.id);
         } else {
-            // No tabs left
             activeTabId = null;
             if (editorInstance) {
                 editorInstance.setValue('// Select a file from the explorer to start coding');
@@ -238,14 +234,12 @@ function updateTabsUI() {
             </button>
         `;
         
-        // Tab click - switch to this tab
         tabElement.addEventListener('click', (e) => {
             if (!e.target.closest('.tab-close')) {
                 switchToTab(tab.id);
             }
         });
         
-        // Close button click
         const closeBtn = tabElement.querySelector('.tab-close');
         closeBtn.addEventListener('click', (e) => closeTab(tab.id, e));
         

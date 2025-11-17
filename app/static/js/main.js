@@ -1,6 +1,3 @@
-console.log("I am here ")
-
-// GitHub Login Button Handler
 document.addEventListener('DOMContentLoaded', () => {
     const githubLoginBtn = document.getElementById('githubLoginBtn');
     if (githubLoginBtn) {
@@ -14,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal functionality
     const createRepoBtn = document.getElementById('createRepoBtn');
     const createRepoModal = document.getElementById('createRepoModal');
     const closeModal = document.getElementById('closeModal');
@@ -41,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Close modal when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === createRepoModal) {
             createRepoModal.style.display = 'none';
@@ -49,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Handle form submission
     if (createRepoForm) {
         createRepoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -82,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     createRepoModal.style.display = 'none';
                     createRepoForm.reset();
                     
-                    // Add the new repository to the grid immediately
                     addRepoToGrid(data.repo);
                 } else {
                     alert(`Failed to create repository: ${data.message}`);
@@ -97,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add click handlers to existing repo cards
     addRepoClickHandlers();
 });
 
@@ -135,7 +127,6 @@ function addRepoToGrid(repo) {
         </div>
     `;
     
-    // Add click handler to navigate to repo page
     repoCard.addEventListener('click', () => {
         window.location.href = `/repo/${repo._id}`;
     });
@@ -143,13 +134,11 @@ function addRepoToGrid(repo) {
     reposGrid.appendChild(repoCard);
 }
 
-// Function to add click handlers to existing repo cards
 function addRepoClickHandlers() {
     const repoCards = document.querySelectorAll('.repo-card');
     repoCards.forEach(card => {
         const repoId = card.getAttribute('data-repo-id');
         
-        // Don't add handler to the "No Repositories Yet" card
         if (repoId && repoId !== '0') {
             card.style.cursor = 'pointer';
             card.addEventListener('click', () => {
@@ -158,3 +147,41 @@ function addRepoClickHandlers() {
         }
     });
 }
+
+
+// Add click handlers for sidebar project items
+function addSidebarClickHandlers() {
+    const projectItems = document.querySelectorAll('.project-item');
+    projectItems.forEach(item => {
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', () => {
+            const projectId = item.getAttribute('data-project-id');
+            switch (projectId) {
+                case '1': // My Project
+                    window.location.href = '/home';
+                    break;
+                case '2': // Public Repositories
+                    window.location.href = '/public_repositories';
+                    break;
+                case '3': // Activity Feeds
+                    window.location.href = '/activity_feed';
+                    break;
+                default:
+                    console.warn('Unknown project item clicked');
+            }
+        });
+
+        // Keyboard accessibility (Enter/Space)
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                item.click();
+            }
+        });
+    });
+}
+
+// Call it on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    addSidebarClickHandlers();
+});

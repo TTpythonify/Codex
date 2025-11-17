@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 PISTON_URL = os.getenv("PISTON_URL", "http://piston:2000")
 
 
-# -----------------------------
+# ---------------------------
 # Helper to serialize Mongo documents with ObjectId
 # -----------------------------
 def serialize_doc(doc):

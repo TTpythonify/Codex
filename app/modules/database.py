@@ -4,7 +4,7 @@ from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError, ConnectionFailure
 from dotenv import load_dotenv
 
-load_dotenv()  # loads MONGO_URI from .env
+load_dotenv()  
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

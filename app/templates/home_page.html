@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/home_page.css') }}">
 </head>
 <body>
-    <!-- Navigation Bar -->
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-left">
@@ -45,40 +44,35 @@
         </div>
     </nav>
 
-    <!-- Main Container -->
     <div class="main-container">
-        <!-- Sidebar -->
-         <!-- This would be use for filtering and maybe other things aswel -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h3>Projects</h3>
-                <button class="new-project-btn" id="newProjectBtn">+</button>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h3>Others</h3>
+        </div>
+        <div class="project-list" id="projectList">
+            <div class="project-item active" data-project-id="1" role="button" tabindex="0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                </svg>
+                <span>My Project</span>
             </div>
-            <div class="project-list" id="projectList">
-                <div class="project-item active" data-project-id="1">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                    </svg>
-                    <span>My Project</span>
-                </div>
-                <div class="project-item" data-project-id="2">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                    </svg>
-                    <span>Website Redesign</span>
-                </div>
-                <div class="project-item" data-project-id="3">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                    </svg>
-                    <span>API Integration</span>
-                </div>
+            <div class="project-item" data-project-id="2" role="button" tabindex="0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                </svg>
+                <span>Public Repositories</span>
             </div>
-        </aside>
+            <div class="project-item" data-project-id="3" role="button" tabindex="0">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                </svg>
+                <span>Activity Feeds</span>
+            </div>
+        </div>
+    </aside>
 
-        <!-- Main Content Area -->
+
         <main class="content">
-            <!-- Welcome Section -->
             <section class="welcome-section">
                 <div class="welcome-content">
                     <h1>Welcome back, <span class="highlight">{{ user.username }}</span>! 👋</h1>
@@ -86,7 +80,6 @@
                 </div>
             </section>
 
-            <!-- Repositories Section (Scrollable) -->
             <section class="repos-section">
                 <div class="section-header">
                     <h2>Your Repositories</h2>
@@ -148,7 +141,6 @@
         </main>
     </div>
 
-    <!-- Create Repository Modal -->
     <div class="modal" id="createRepoModal">
         <div class="modal-content">
             <div class="modal-header">
