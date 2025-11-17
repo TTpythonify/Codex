@@ -3,9 +3,12 @@ require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.39.0/min/vs' 
 let editorInstance = null;
 let terminal = null;
 
+// Tab Management System
+let openTabs = []; // Array of open file tabs
+let activeTabId = null; // ID of currently active tab
+
 // Initialize xterm.js terminal first (before Monaco loads)
 function initTerminal() {
-    // Check if Terminal is available
     if (typeof Terminal === 'undefined') {
         console.error('xterm.js not loaded! Terminal constructor not found.');
         return;
@@ -52,14 +55,26 @@ initTerminal();
 require(['vs/editor/editor.main'], function () {
     // Create the editor
     editorInstance = monaco.editor.create(document.getElementById('editor'), {
-        value: '# Write your Python code here\nprint("Hello, CODEX!")\n',
-        language: 'python',
+        value: '// Select a file from the explorer to start coding',
+        language: 'javascript',
         theme: 'vs-dark',
         automaticLayout: true,
         fontSize: 14,
         minimap: { enabled: true },
         scrollBeyondLastLine: false,
         wordWrap: 'on'
+    });
+
+    // Track content changes for unsaved indicator
+    editorInstance.onDidChangeModelContent(() => {
+        if (activeTabId) {
+            const tab = openTabs.find(t => t.id === activeTabId);
+            if (tab) {
+                tab.content = editorInstance.getValue();
+                tab.isDirty = true;
+                updateTabsUI();
+            }
+        }
     });
 
     // Attach Run Code button handler
@@ -80,7 +95,6 @@ require(['vs/editor/editor.main'], function () {
     document.getElementById('closeTerminal').addEventListener('click', () => {
         const terminalPanel = document.querySelector('.terminal-panel');
         terminalPanel.classList.toggle('closed');
-        // Trigger editor resize
         setTimeout(() => editorInstance.layout(), 100);
     });
 
@@ -92,20 +106,165 @@ require(['vs/editor/editor.main'], function () {
 });
 
 // ============================================================================
+// TAB MANAGEMENT SYSTEM
+// ============================================================================
+
+function openFileInTab(file) {
+    // Check if file is already open
+    const existingTab = openTabs.find(tab => tab.id === file.id);
+    
+    if (existingTab) {
+        // File already open, just switch to it
+        switchToTab(existingTab.id);
+    } else {
+        // Create new tab
+        const newTab = {
+            id: file.id,
+            name: file.name,
+            path: file.path,
+            language: file.language,
+            content: file.content,
+            isDirty: false
+        };
+        
+        openTabs.push(newTab);
+        activeTabId = newTab.id;
+        
+        // Update editor
+        loadTabIntoEditor(newTab);
+        updateTabsUI();
+    }
+}
+
+function switchToTab(tabId) {
+    const tab = openTabs.find(t => t.id === tabId);
+    if (!tab) return;
+    
+    // Save current tab content before switching
+    if (activeTabId && editorInstance) {
+        const currentTab = openTabs.find(t => t.id === activeTabId);
+        if (currentTab) {
+            currentTab.content = editorInstance.getValue();
+        }
+    }
+    
+    activeTabId = tabId;
+    loadTabIntoEditor(tab);
+    updateTabsUI();
+}
+
+function loadTabIntoEditor(tab) {
+    if (!editorInstance) return;
+    
+    editorInstance.setValue(tab.content || '');
+    
+    // Map language to Monaco language
+    const languageMap = {
+        'python': 'python',
+        'javascript': 'javascript',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c'
+    };
+    
+    const monacoLanguage = languageMap[tab.language] || 'plaintext';
+    monaco.editor.setModelLanguage(editorInstance.getModel(), monacoLanguage);
+}
+
+function closeTab(tabId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    const tabIndex = openTabs.findIndex(t => t.id === tabId);
+    if (tabIndex === -1) return;
+    
+    const tab = openTabs[tabIndex];
+    
+    // Check if tab has unsaved changes
+    if (tab.isDirty) {
+        const confirmClose = confirm(`${tab.name} has unsaved changes. Close anyway?`);
+        if (!confirmClose) return;
+    }
+    
+    // Remove tab
+    openTabs.splice(tabIndex, 1);
+    
+    // If closing active tab, switch to another
+    if (activeTabId === tabId) {
+        if (openTabs.length > 0) {
+            // Switch to next tab or previous if at end
+            const nextTab = openTabs[Math.min(tabIndex, openTabs.length - 1)];
+            switchToTab(nextTab.id);
+        } else {
+            // No tabs left
+            activeTabId = null;
+            if (editorInstance) {
+                editorInstance.setValue('// Select a file from the explorer to start coding');
+            }
+        }
+    }
+    
+    updateTabsUI();
+}
+
+function updateTabsUI() {
+    const tabsContainer = document.querySelector('.tabs-container');
+    if (!tabsContainer) return;
+    
+    tabsContainer.innerHTML = '';
+    
+    openTabs.forEach(tab => {
+        const tabElement = document.createElement('div');
+        tabElement.className = `tab ${tab.id === activeTabId ? 'active' : ''}`;
+        
+        // File icon based on language
+        const iconMap = {
+            'python': '🐍',
+            'javascript': '📜',
+            'java': '☕',
+            'cpp': '⚙️',
+            'c': '🔧'
+        };
+        const icon = iconMap[tab.language] || '📄';
+        
+        tabElement.innerHTML = `
+            <span class="tab-icon">${icon}</span>
+            <span class="tab-name">${tab.name}${tab.isDirty ? ' •' : ''}</span>
+            <button class="tab-close" data-tab-id="${tab.id}">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/>
+                </svg>
+            </button>
+        `;
+        
+        // Tab click - switch to this tab
+        tabElement.addEventListener('click', (e) => {
+            if (!e.target.closest('.tab-close')) {
+                switchToTab(tab.id);
+            }
+        });
+        
+        // Close button click
+        const closeBtn = tabElement.querySelector('.tab-close');
+        closeBtn.addEventListener('click', (e) => closeTab(tab.id, e));
+        
+        tabsContainer.appendChild(tabElement);
+    });
+}
+
+// ============================================================================
 // FOLDER CREATION FUNCTIONALITY
 // ============================================================================
 
-// New Folder Button - Opens modal and loads existing folders
 document.getElementById('newFolderBtn').addEventListener('click', async () => {
     const modal = document.getElementById('createFolderModal');
     modal.style.display = 'flex';
     
-    // Load existing folders into the dropdown
     const repoId = document.getElementById('repoId').value;
     await loadFoldersIntoDropdown(repoId);
 });
 
-// Close modal handlers
 document.getElementById('closeFolderModal').addEventListener('click', () => {
     closeFolderModal();
 });
@@ -114,7 +273,6 @@ document.getElementById('cancelFolderBtn').addEventListener('click', () => {
     closeFolderModal();
 });
 
-// Close modal when clicking outside
 window.addEventListener('click', (e) => {
     const modal = document.getElementById('createFolderModal');
     if (e.target === modal) {
@@ -129,7 +287,6 @@ function closeFolderModal() {
     document.getElementById('parentFolderSelect').innerHTML = '<option value="">📁 Root (top level)</option>';
 }
 
-// Load existing folders into dropdown
 async function loadFoldersIntoDropdown(repoId) {
     try {
         const response = await fetch(`/get_files/${repoId}`);
@@ -139,18 +296,13 @@ async function loadFoldersIntoDropdown(repoId) {
             const dropdown = document.getElementById('parentFolderSelect');
             dropdown.innerHTML = '<option value="">📁 Root (top level)</option>';
             
-            // Filter only folders from the files
             const folders = data.files.filter(f => f.type === 'folder');
-            
-            // Sort folders by path for better organization
             folders.sort((a, b) => a.path.localeCompare(b.path));
             
-            // Add each folder as an option
             folders.forEach(folder => {
                 const option = document.createElement('option');
                 option.value = folder.id;
                 
-                // Add indentation based on folder depth for visual hierarchy
                 const depth = (folder.path.match(/\//g) || []).length;
                 const indent = '  '.repeat(depth);
                 option.textContent = `${indent}📁 ${folder.path}`;
@@ -165,7 +317,6 @@ async function loadFoldersIntoDropdown(repoId) {
     }
 }
 
-// Create Folder Button - Sends request to backend
 document.getElementById('createFolderBtn').addEventListener('click', async () => {
     const folderName = document.getElementById('newFolderName').value.trim();
     const parentId = document.getElementById('parentFolderSelect').value || null;
@@ -180,7 +331,7 @@ document.getElementById('createFolderBtn').addEventListener('click', async () =>
     const requestBody = {
         repo_id: repoId,
         folder_name: folderName,
-        parent_id: parentId  // null for root, or folder ID for nested
+        parent_id: parentId
     };
     
     console.log('Creating folder with:', requestBody);
@@ -199,10 +350,7 @@ document.getElementById('createFolderBtn').addEventListener('click', async () =>
         if (response.ok) {
             alert(`Folder "${folderName}" created successfully!`);
             closeFolderModal();
-            
-            // Refresh the file tree to show new folder
             loadFileTree(repoId);
-            
         } else {
             alert(`Error: ${data.error || data.message || 'Failed to create folder'}`);
         }
@@ -213,22 +361,18 @@ document.getElementById('createFolderBtn').addEventListener('click', async () =>
     }
 });
 
-
 // ============================================================================
 // FILE CREATION FUNCTIONALITY
 // ============================================================================
 
-// New File Button - Opens modal and loads existing folders
 document.getElementById('newFileBtn').addEventListener('click', async () => {
     const modal = document.getElementById('createFileModal');
     modal.style.display = 'flex';
     
-    // Load existing folders into the dropdown
     const repoId = document.getElementById('repoId').value;
     await loadFoldersIntoFileDropdown(repoId);
 });
 
-// Close file modal handlers
 document.getElementById('closeFileModal').addEventListener('click', () => {
     closeFileModal();
 });
@@ -237,7 +381,6 @@ document.getElementById('cancelFileBtn').addEventListener('click', () => {
     closeFileModal();
 });
 
-// Close modal when clicking outside
 window.addEventListener('click', (e) => {
     const fileModal = document.getElementById('createFileModal');
     if (e.target === fileModal) {
@@ -253,7 +396,6 @@ function closeFileModal() {
     document.getElementById('parentFileSelect').innerHTML = '<option value="">📁 Root (top level)</option>';
 }
 
-// Load existing folders into file creation dropdown
 async function loadFoldersIntoFileDropdown(repoId) {
     try {
         const response = await fetch(`/get_files/${repoId}`);
@@ -263,18 +405,13 @@ async function loadFoldersIntoFileDropdown(repoId) {
             const dropdown = document.getElementById('parentFileSelect');
             dropdown.innerHTML = '<option value="">📁 Root (top level)</option>';
             
-            // Filter only folders
             const folders = data.files.filter(f => f.type === 'folder');
-            
-            // Sort folders by path
             folders.sort((a, b) => a.path.localeCompare(b.path));
             
-            // Add each folder as an option
             folders.forEach(folder => {
                 const option = document.createElement('option');
                 option.value = folder.id;
                 
-                // Add indentation based on folder depth
                 const depth = (folder.path.match(/\//g) || []).length;
                 const indent = '  '.repeat(depth);
                 option.textContent = `${indent}📁 ${folder.path}`;
@@ -289,7 +426,6 @@ async function loadFoldersIntoFileDropdown(repoId) {
     }
 }
 
-// Map language to file extension
 function getFileExtension(language) {
     const extensionMap = {
         'python': '.py',
@@ -301,7 +437,6 @@ function getFileExtension(language) {
     return extensionMap[language] || '';
 }
 
-// Create File Button - Sends request to backend
 document.getElementById('createFileBtn').addEventListener('click', async () => {
     const fileName = document.getElementById('newFileName').value.trim();
     const language = document.getElementById('fileLanguage').value;
@@ -312,7 +447,6 @@ document.getElementById('createFileBtn').addEventListener('click', async () => {
         return;
     }
     
-    // Add appropriate extension based on language
     const extension = getFileExtension(language);
     const fullFileName = fileName + extension;
     
@@ -322,7 +456,7 @@ document.getElementById('createFileBtn').addEventListener('click', async () => {
         repo_id: repoId,
         file_name: fullFileName,
         language: language,
-        content: '',  // Start with empty content
+        content: '',
         parent_id: parentId
     };
     
@@ -343,14 +477,18 @@ document.getElementById('createFileBtn').addEventListener('click', async () => {
             alert(`File "${fullFileName}" created successfully!`);
             closeFileModal();
             
-            // Refresh the file tree to show new file
-            loadFileTree(repoId);
+            // Refresh file tree
+            await loadFileTree(repoId);
             
-            // Open the new file in the editor
-            if (editorInstance) {
-                editorInstance.setValue('');
-                monaco.editor.setModelLanguage(editorInstance.getModel(), language);
-            }
+            // Open the newly created file in a tab
+            const newFile = {
+                id: data.file.id,
+                name: data.file.name,
+                path: data.file.path,
+                language: data.file.language,
+                content: data.file.content || ''
+            };
+            openFileInTab(newFile);
             
         } else {
             alert(`Error: ${data.error || data.message || 'Failed to create file'}`);
@@ -366,7 +504,6 @@ document.getElementById('createFileBtn').addEventListener('click', async () => {
 // FILE TREE DISPLAY
 // ============================================================================
 
-// Load and display file tree
 async function loadFileTree(repoId) {
     try {
         const response = await fetch(`/get_files/${repoId}`);
@@ -383,7 +520,6 @@ async function loadFileTree(repoId) {
     }
 }
 
-// Display file tree in the sidebar
 function displayFileTree(items) {
     const fileTreeContainer = document.getElementById('fileTreeContainer');
     fileTreeContainer.innerHTML = '';
@@ -393,30 +529,22 @@ function displayFileTree(items) {
         return;
     }
     
-    // Build a hierarchical structure
     const tree = buildTree(items);
-    
-    // Render the tree
     renderTree(tree, fileTreeContainer, 0);
 }
 
-// Build hierarchical tree structure from flat list
 function buildTree(items) {
     const itemMap = {};
     const rootItems = [];
     
-    // First pass: create map of all items
     items.forEach(item => {
         itemMap[item.id] = { ...item, children: [] };
     });
     
-    // Second pass: build parent-child relationships
     items.forEach(item => {
         if (item.parent_id && itemMap[item.parent_id]) {
-            // This item has a parent, add it to parent's children
             itemMap[item.parent_id].children.push(itemMap[item.id]);
         } else {
-            // This is a root-level item
             rootItems.push(itemMap[item.id]);
         }
     });
@@ -424,31 +552,29 @@ function buildTree(items) {
     return rootItems;
 }
 
-// Recursively render tree
 function renderTree(items, container, depth) {
     items.forEach(item => {
         const itemElement = createTreeItemElement(item, depth);
         container.appendChild(itemElement);
         
-        // If item has children, render them recursively
         if (item.children && item.children.length > 0) {
             const childContainer = document.createElement('div');
             childContainer.className = 'tree-children';
-            childContainer.style.display = 'none'; // Start collapsed
+            childContainer.style.display = 'none';
             renderTree(item.children, childContainer, depth + 1);
             container.appendChild(childContainer);
             
-            // Toggle children on folder click
             itemElement.addEventListener('click', (e) => {
-                e.stopPropagation();
-                childContainer.style.display = childContainer.style.display === 'none' ? 'block' : 'none';
-                itemElement.classList.toggle('expanded');
+                if (item.type === 'folder') {
+                    e.stopPropagation();
+                    childContainer.style.display = childContainer.style.display === 'none' ? 'block' : 'none';
+                    itemElement.classList.toggle('expanded');
+                }
             });
         }
     });
 }
 
-// Create a single tree item element
 function createTreeItemElement(item, depth) {
     const div = document.createElement('div');
     div.className = `file-tree-item ${item.type}`;
@@ -469,17 +595,9 @@ function createTreeItemElement(item, depth) {
             <span>${item.name}</span>
         `;
         
-        // Click handler for files - load content in editor
         div.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (editorInstance && item.content !== undefined) {
-                editorInstance.setValue(item.content || '');
-                
-                // Update language based on file extension
-                if (item.language) {
-                    monaco.editor.setModelLanguage(editorInstance.getModel(), item.language);
-                }
-            }
+            openFileInTab(item);
         });
     }
     
@@ -521,14 +639,12 @@ function runCode() {
         if (data.error) {
             terminal.writeln(`\x1b[1;31m✖ Error:\x1b[0m ${data.error}`);
         } else {
-            // Write output line by line for better formatting
             const output = data.output || 'No output';
             const lines = output.split('\n');
             lines.forEach(line => {
                 terminal.writeln(line);
             });
             
-            // Show success/failure indicator
             if (data.success !== false) {
                 terminal.writeln('\x1b[1;32m✓ Execution completed successfully\x1b[0m');
             } else {

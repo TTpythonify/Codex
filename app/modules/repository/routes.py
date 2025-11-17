@@ -135,39 +135,40 @@ def repo_page(repo_id):
         # Find user in DB
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
+            logger.error(f"User {github_username} not found in database")
             return redirect(url_for("main.home"))
 
-        # Convert repo_id to ObjectId
-        repo_obj_id = ObjectId(repo_id)
+        # Convert repo_id to ObjectId - ADD VALIDATION HERE
+        try:
+            repo_obj_id = ObjectId(repo_id)
+        except Exception as e:
+            logger.error(f"Invalid repo_id format: {repo_id}, error: {e}")
+            return redirect(url_for("main.home"))
 
         # Find repository owned by this user
         repo_doc = repositories_collection.find_one({
             "_id": repo_obj_id,
             "user_id": user_doc["_id"]
         })
+        
         if not repo_doc:
+            logger.error(f"Repository {repo_id} not found or not owned by user {github_username}")
             return redirect(url_for("main.home"))
 
-        # Fetch all files in this repo
-        files = list(files_collection.find({"repo_id": repo_doc["_id"]}))
-
-        # Prepare file data for frontend
-        files_data = [{
-            "id": str(f["_id"]),
-            "path": f["path"],
-            "language": f["language"],
-            "content": f["content"]
-        } for f in files]
+        # Fetch all files in this repo - NO NEED TO PASS TO TEMPLATE
+        # Files will be loaded via AJAX call from frontend
+        logger.info(f"Successfully loaded repository page for {repo_doc['name']}")
 
         return render_template(
             "code_editor.html",
             repo=repo_doc,
-            user=user_doc,
-            files=files_data
+            user=user_doc
         )
 
     except Exception as e:
         logger.error(f"Error accessing repository page: {e}")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for("main.home"))
 
 
@@ -431,6 +432,8 @@ def create_folder():
     
     except Exception as e:
         logger.error(f"Error creating folder: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": f"Failed to create folder: {str(e)}"}), 500
     
 @repo_routes.route("/create_file", methods=["POST"])
@@ -589,6 +592,8 @@ def create_file():
     
     except Exception as e:
         logger.error(f"Error creating file: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": f"Failed to create file: {str(e)}"}), 500
     
 
@@ -609,6 +614,7 @@ def get_files(repo_id):
         try:
             repo_obj_id = ObjectId(repo_id)
         except Exception as e:
+            logger.error(f"Invalid repo_id format: {e}")
             return jsonify({"error": "Invalid repository ID"}), 400
         
         # Step 3: Get authenticated user information
@@ -661,6 +667,6 @@ def get_files(repo_id):
     
     except Exception as e:
         logger.error(f"Error fetching files: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
-

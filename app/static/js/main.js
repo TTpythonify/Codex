@@ -1,4 +1,5 @@
 console.log("I am here ")
+
 // GitHub Login Button Handler
 document.addEventListener('DOMContentLoaded', () => {
     const githubLoginBtn = document.getElementById('githubLoginBtn');
@@ -105,7 +106,7 @@ function addRepoToGrid(repo) {
     const reposGrid = document.getElementById('reposGrid');
     
     // Remove "No Repositories Yet" card if it exists
-    const noReposCard = reposGrid.querySelector('[data-repo-id="4"]');
+    const noReposCard = reposGrid.querySelector('[data-repo-id="0"]');
     if (noReposCard) {
         noReposCard.remove();
     }
@@ -113,7 +114,7 @@ function addRepoToGrid(repo) {
     // Create new repo card
     const repoCard = document.createElement('div');
     repoCard.className = 'repo-card';
-    repoCard.setAttribute('data-repo-id', repo.id);
+    repoCard.setAttribute('data-repo-id', repo._id);
     repoCard.style.cursor = 'pointer';
     
     repoCard.innerHTML = `
@@ -136,7 +137,7 @@ function addRepoToGrid(repo) {
     
     // Add click handler to navigate to repo page
     repoCard.addEventListener('click', () => {
-        window.location.href = `/repo/${repo.id}`;
+        window.location.href = `/repo/${repo._id}`;
     });
     
     reposGrid.appendChild(repoCard);
@@ -147,8 +148,9 @@ function addRepoClickHandlers() {
     const repoCards = document.querySelectorAll('.repo-card');
     repoCards.forEach(card => {
         const repoId = card.getAttribute('data-repo-id');
+        
         // Don't add handler to the "No Repositories Yet" card
-        if (repoId && repoId !== '4') {
+        if (repoId && repoId !== '0') {
             card.style.cursor = 'pointer';
             card.addEventListener('click', () => {
                 window.location.href = `/repo/${repoId}`;
