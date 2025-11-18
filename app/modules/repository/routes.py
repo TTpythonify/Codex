@@ -177,15 +177,16 @@ def repo_page(repo_id):
 def run_code():
     logger.info("Code execution requested")
 
-    # Get code from frontend
+    # Get code and language from frontend
     data = request.get_json()
     code = data.get("code", "")
+    language = data.get("language", "python")  # Get language from request
     
-    print("\n" + "="*60)
-    print("📝 CODE RECEIVED:")
-    print("="*60)
-    print(code)
-    print("="*60 + "\n")
+    logger.info("\n" + "="*60)
+    logger.info(f"📝 CODE RECEIVED (Language: {language}):")
+    logger.info("="*60)
+    logger.info(code)
+    logger.info("="*60 + "\n")
     
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
@@ -194,13 +195,43 @@ def run_code():
     if len(code) > 50000:  # 50KB limit
         return jsonify({"error": "Code too long (max 50KB)"}), 400
 
+    # Map frontend language to Piston language identifiers
+    language_map = {
+        'python': 'python',
+        'javascript': 'javascript',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c'
+    }
+    
+    # Map languages to their file extensions
+    file_extension_map = {
+        'python': 'py',
+        'javascript': 'js',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c'
+    }
+    
+    piston_language = language_map.get(language, 'python')
+    file_extension = file_extension_map.get(language, 'py')
+    
+    # Determine the filename based on language
+    if language == 'java':
+        # For Java, we need to extract the class name
+        import re
+        class_match = re.search(r'public\s+class\s+(\w+)', code)
+        filename = f"{class_match.group(1)}.java" if class_match else "Main.java"
+    else:
+        filename = f"main.{file_extension}"
+
     # Piston API format
     execution_data = {
-        "language": "python",
+        "language": piston_language,
         "version": "*",
         "files": [
             {
-                "name": "main.py",
+                "name": filename,
                 "content": code
             }
         ],
@@ -212,8 +243,9 @@ def run_code():
         "run_memory_limit": -1
     }
 
-    print("🚀 Sending request to Piston API...")
-    print(f"   URL: {PISTON_URL}/api/v2/execute")
+    logger.info(f"🚀 Sending request to Piston API for {piston_language}...")
+    logger.info(f"   URL: {PISTON_URL}/api/v2/execute")
+    logger.info(f"   Filename: {filename}")
     
     try:
         # Send code to Piston service
@@ -225,65 +257,81 @@ def run_code():
         response.raise_for_status()
         result = response.json()
 
-        print("\n" + "="*60)
-        print("📦 PISTON RAW RESPONSE:")
-        print("="*60)
-        print(json.dumps(result, indent=2))
-        print("="*60 + "\n")
+        logger.info("\n" + "="*60)
+        logger.info("📦 PISTON RAW RESPONSE:")
+        logger.info("="*60)
+        logger.info(json.dumps(result, indent=2))
+        logger.info("="*60 + "\n")
 
-        # Get output
+        # Get output from compile (for compiled languages) and run
+        compile_result = result.get("compile", {})
         run_result = result.get("run", {})
+        
+        compile_stdout = compile_result.get("stdout", "")
+        compile_stderr = compile_result.get("stderr", "")
+        compile_code = compile_result.get("code", 0)
+        
         stdout = run_result.get("stdout", "")
         stderr = run_result.get("stderr", "")
         exit_code = run_result.get("code", 0)
 
-        print("="*60)
-        print("📊 PARSED RESULTS:")
-        print("="*60)
-        print(f"Exit Code: {exit_code}")
-        print(f"STDOUT:\n{stdout if stdout else '(empty)'}")
-        print(f"STDERR:\n{stderr if stderr else '(empty)'}")
-        print("="*60 + "\n")
+        logger.info("="*60)
+        logger.info("📊 PARSED RESULTS:")
+        logger.info("="*60)
+        logger.info(f"Compile Code: {compile_code}")
+        logger.info(f"Compile STDERR: {compile_stderr if compile_stderr else '(empty)'}")
+        logger.info(f"Exit Code: {exit_code}")
+        logger.info(f"STDOUT:\n{stdout if stdout else '(empty)'}")
+        logger.info(f"STDERR:\n{stderr if stderr else '(empty)'}")
+        logger.info("="*60 + "\n")
 
-        # Combine outputs
-        output = stdout if stdout else (stderr if stderr else "No output")
-
-        # Check for errors
-        if exit_code != 0:
-            output = f"Error (exit code {exit_code}):\n{output}"
+        # Check for compilation errors first (for compiled languages)
+        if compile_code != 0 and compile_stderr:
+            output = f"Compilation Error:\n{compile_stderr}"
+            success = False
+        else:
+            # Combine outputs
+            output = stdout if stdout else (stderr if stderr else "No output")
+            
+            # Check for runtime errors
+            if exit_code != 0:
+                output = f"Runtime Error (exit code {exit_code}):\n{output}"
+                success = False
+            else:
+                success = True
 
         logger.info(f"Code executed with exit code: {exit_code}")
         
         response_data = {
             "output": output,
-            "success": exit_code == 0
+            "success": success
         }
         
-        print("="*60)
-        print("✉️ RESPONSE TO FRONTEND:")
-        print("="*60)
-        print(json.dumps(response_data, indent=2))
-        print("="*60 + "\n")
+        logger.info("="*60)
+        logger.info("✉️ RESPONSE TO FRONTEND:")
+        logger.info("="*60)
+        logger.info(json.dumps(response_data, indent=2))
+        logger.info("="*60 + "\n")
         
         return jsonify(response_data)
 
     except requests.exceptions.Timeout:
         logger.error("Piston execution timeout")
-        print("❌ ERROR: Piston execution timeout")
+        logger.info("❌ ERROR: Piston execution timeout")
         return jsonify({"error": "Execution timeout (max 15 seconds)"}), 408
         
     except requests.exceptions.RequestException as e:
         logger.error(f"Error communicating with Piston: {e}")
-        print(f"❌ ERROR: Could not communicate with Piston: {e}")
+        logger.info(f"❌ ERROR: Could not communicate with Piston: {e}")
         return jsonify({"error": f"Could not execute code: {str(e)}"}), 500
         
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
-        print(f"❌ UNEXPECTED ERROR: {e}")
+        logger.info(f"❌ UNEXPECTED ERROR: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
-    
+
 
 @repo_routes.route("/create_folder", methods=["POST"])
 def create_folder():

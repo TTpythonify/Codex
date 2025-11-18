@@ -62,7 +62,10 @@ require(['vs/editor/editor.main'], function () {
         fontSize: 14,
         minimap: { enabled: true },
         scrollBeyondLastLine: false,
-        wordWrap: 'on'
+        wordWrap: 'on',
+        tabSize: 4,
+        insertSpaces: true,
+        detectIndentation: true
     });
 
     editorInstance.onDidChangeModelContent(() => {
@@ -167,6 +170,26 @@ function loadTabIntoEditor(tab) {
     
     const monacoLanguage = languageMap[tab.language] || 'plaintext';
     monaco.editor.setModelLanguage(editorInstance.getModel(), monacoLanguage);
+    
+    // Set language-specific indentation
+    const model = editorInstance.getModel();
+    switch(tab.language) {
+        case 'python':
+            model.updateOptions({ tabSize: 4, insertSpaces: true });
+            break;
+        case 'javascript':
+            model.updateOptions({ tabSize: 2, insertSpaces: true });
+            break;
+        case 'java':
+            model.updateOptions({ tabSize: 4, insertSpaces: true });
+            break;
+        case 'cpp':
+        case 'c':
+            model.updateOptions({ tabSize: 4, insertSpaces: true });
+            break;
+        default:
+            model.updateOptions({ tabSize: 4, insertSpaces: true });
+    }
 }
 
 function closeTab(tabId, event) {
@@ -599,7 +622,7 @@ function createTreeItemElement(item, depth) {
 }
 
 // ============================================================================
-// CODE EXECUTION
+// CODE EXECUTION - MULTI-LANGUAGE SUPPORT
 // ============================================================================
 
 function runCode() {
@@ -620,13 +643,33 @@ function runCode() {
         return;
     }
 
-    terminal.writeln('\x1b[1;32m▶ Running code...\x1b[0m');
+    // Get the current language from the active tab
+    let currentLanguage = 'python'; // Default
+    if (activeTabId) {
+        const activeTab = openTabs.find(t => t.id === activeTabId);
+        if (activeTab) {
+            currentLanguage = activeTab.language;
+        }
+    }
+
+    const languageNames = {
+        'python': 'Python',
+        'javascript': 'JavaScript',
+        'java': 'Java',
+        'cpp': 'C++',
+        'c': 'C'
+    };
+
+    terminal.writeln(`\x1b[1;36m▶ Running ${languageNames[currentLanguage] || 'code'}...\x1b[0m`);
     terminal.writeln('─'.repeat(50));
 
     fetch('/run_code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code })
+        body: JSON.stringify({ 
+            code: code,
+            language: currentLanguage
+        })
     })
     .then(response => response.json())
     .then(data => {
