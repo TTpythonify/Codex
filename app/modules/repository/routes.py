@@ -181,17 +181,11 @@ def run_code():
     code = data.get("code", "")
     language = data.get("language", "python")  # Get language from request
     
-    logger.info("\n" + "="*60)
-    logger.info(f"📝 CODE RECEIVED (Language: {language}):")
-    logger.info("="*60)
-    logger.info(code)
-    logger.info("="*60 + "\n")
-    
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
 
     # Basic validation
-    if len(code) > 50000:  # 50KB limit
+    if len(code) > 50000:  
         return jsonify({"error": "Code too long (max 50KB)"}), 400
 
     # Map frontend language to Piston language identifiers
@@ -242,10 +236,6 @@ def run_code():
         "run_memory_limit": -1
     }
 
-    logger.info(f"🚀 Sending request to Piston API for {piston_language}...")
-    logger.info(f"   URL: {PISTON_URL}/api/v2/execute")
-    logger.info(f"   Filename: {filename}")
-    
     try:
         # Send code to Piston service
         response = requests.post(
@@ -256,11 +246,6 @@ def run_code():
         response.raise_for_status()
         result = response.json()
 
-        logger.info("\n" + "="*60)
-        logger.info("📦 PISTON RAW RESPONSE:")
-        logger.info("="*60)
-        logger.info(json.dumps(result, indent=2))
-        logger.info("="*60 + "\n")
 
         # Get output from compile (for compiled languages) and run
         compile_result = result.get("compile", {})
@@ -274,15 +259,6 @@ def run_code():
         stderr = run_result.get("stderr", "")
         exit_code = run_result.get("code", 0)
 
-        logger.info("="*60)
-        logger.info("📊 PARSED RESULTS:")
-        logger.info("="*60)
-        logger.info(f"Compile Code: {compile_code}")
-        logger.info(f"Compile STDERR: {compile_stderr if compile_stderr else '(empty)'}")
-        logger.info(f"Exit Code: {exit_code}")
-        logger.info(f"STDOUT:\n{stdout if stdout else '(empty)'}")
-        logger.info(f"STDERR:\n{stderr if stderr else '(empty)'}")
-        logger.info("="*60 + "\n")
 
         # Check for compilation errors first (for compiled languages)
         if compile_code != 0 and compile_stderr:
@@ -299,18 +275,14 @@ def run_code():
             else:
                 success = True
 
-        logger.info(f"Code executed with exit code: {exit_code}")
+        logger.info(f"Code executed with exit code: {exit_code}\n\n\nOUTPUT : {output}\n\n")
+
+        # THe output i will store in thhe database now
         
         response_data = {
             "output": output,
             "success": success
         }
-        
-        logger.info("="*60)
-        logger.info("✉️ RESPONSE TO FRONTEND:")
-        logger.info("="*60)
-        logger.info(json.dumps(response_data, indent=2))
-        logger.info("="*60 + "\n")
         
         return jsonify(response_data)
 
@@ -485,18 +457,6 @@ def create_folder():
     
 @repo_routes.route("/create_file", methods=["POST"])
 def create_file():
-    """
-    Creates a new file in the repository
-    
-    Expected JSON body:
-    {
-        "repo_id": "507f1f77bcf86cd799439011",
-        "file_name": "main.py",
-        "language": "python",
-        "content": "",
-        "parent_id": null  // or folder ID
-    }
-    """
     logger.info("File creation requested")
     
     try:

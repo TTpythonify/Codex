@@ -19,7 +19,6 @@ def login_page():
         try:
             resp = github.get("/user")
             if resp.ok:
-                logger.info("User already authorized with GitHub. Redirecting to home.")
                 return redirect(url_for("main.home"))
         except Exception as e:
             logger.error(f"Error checking GitHub authorization: {e}")
@@ -28,10 +27,8 @@ def login_page():
 
 @main_routes.route("/test-oauth")
 def test_oauth():
-    logger.info("Accessing test OAuth route...")
     try:
         oauth_url = url_for('github.login', _external=True)
-        logger.info(f"OAuth URL generated: {oauth_url}")
         return jsonify({
             "status": "success",
             "oauth_url": oauth_url,
@@ -49,7 +46,6 @@ def test_oauth():
 def home():
     logger.info("Accessing home page...")
     if not github.authorized:
-        logger.info("User not authorized, redirecting to login page.")
         return redirect(url_for("main.login_page"))
 
     try:
@@ -61,13 +57,11 @@ def home():
         github_id = user_data['id']
         github_username = user_data['login']
 
-        logger.info(f"GitHub user data fetched: {github_username}")
         session["username"] = github_username
 
         # Look for user in DB
         existing_user = user_collection.find_one({"github_id": github_id})
         if existing_user:
-            logger.info(f"Existing user found: {github_username}. Updating info...")
             user_collection.update_one(
                 {"github_id": github_id},
                 {"$set": {
@@ -79,7 +73,6 @@ def home():
             )
             user_doc = user_collection.find_one({"github_id": github_id})
         else:
-            logger.info(f"Creating new user in MongoDB: {github_username}")
             insert_result = user_collection.insert_one({
                 "github_id": github_id,
                 "username": github_username,
@@ -102,7 +95,6 @@ def home():
                 repo["updated_at"] = repo["updated_at"].strftime("%Y-%m-%d")
             repos.append(repo)
 
-        logger.info(f"Rendering home page for user: {user_doc['username']} with {len(repos)} repositories")
         return render_template("home_page.html", user=user_doc, repos=repos)
 
     except Exception as e:
@@ -115,7 +107,6 @@ def public_repositories():
 
     logger.info("Accessing home page...")
     if not github.authorized:
-        logger.info("User not authorized, redirecting to login page.")
         return redirect(url_for("main.login_page"))
 
     try:
@@ -127,13 +118,11 @@ def public_repositories():
         github_id = user_data['id']
         github_username = user_data['login']
 
-        logger.info(f"GitHub user data fetched: {github_username}")
         session["username"] = github_username
 
         # Look for user in DB
         existing_user = user_collection.find_one({"github_id": github_id})
         if existing_user:
-            logger.info(f"Existing user found: {github_username}. Updating info...")
             user_collection.update_one(
                 {"github_id": github_id},
                 {"$set": {
@@ -145,7 +134,6 @@ def public_repositories():
             )
             user_doc = user_collection.find_one({"github_id": github_id})
 
-        logger.info(f"Rendering home page for user: {user_doc['username']}")
         return render_template("public_repositories.html", user=user_doc)    
 
     except Exception as e:
@@ -159,7 +147,6 @@ def activity_feed():
 
     logger.info("Accessing home page...")
     if not github.authorized:
-        logger.info("User not authorized, redirecting to login page.")
         return redirect(url_for("main.login_page"))
 
     try:
@@ -171,13 +158,11 @@ def activity_feed():
         github_id = user_data['id']
         github_username = user_data['login']
 
-        logger.info(f"GitHub user data fetched: {github_username}")
         session["username"] = github_username
 
         # Look for user in DB
         existing_user = user_collection.find_one({"github_id": github_id})
         if existing_user:
-            logger.info(f"Existing user found: {github_username}. Updating info...")
             user_collection.update_one(
                 {"github_id": github_id},
                 {"$set": {
@@ -189,7 +174,6 @@ def activity_feed():
             )
             user_doc = user_collection.find_one({"github_id": github_id})
 
-        logger.info(f"Rendering home page for user: {user_doc['username']}")
         return render_template("activity_feed.html", user=user_doc)   
     
 
@@ -200,12 +184,10 @@ def activity_feed():
 
 @main_routes.route("/logout")
 def logout():
-    logger.info("Logging out user and clearing session...")
     session.clear()
     return redirect(url_for("main.login_page"))
 
 
 @main_routes.route("/authorized")
 def authorized():
-    logger.info("Authorized route hit. Redirecting to home...")
     return redirect(url_for("main.home"))
