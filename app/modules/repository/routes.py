@@ -180,7 +180,10 @@ def run_code():
     data = request.get_json()
     code = data.get("code", "")
     language = data.get("language", "python")  # Get language from request
+    file_id = data.get("file_id")
     
+    logger.info(f"\n\nTab:{file_id} \n\n")
+
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
 
@@ -274,11 +277,41 @@ def run_code():
                 success = False
             else:
                 success = True
-
-        logger.info(f"Code executed with exit code: {exit_code}\n\n\nOUTPUT : {output}\n\n")
-
-        # THe output i will store in thhe database now
         
+        if success and file_id:
+            try:
+                if github.authorized:
+                    user_resp = github.get("/user")
+                    if user_resp.ok:
+                        github_username = user_resp.json()["login"]
+                        user_doc = user_collection.find_one({"username": github_username})
+                        
+                        if user_doc:
+                            file_obj_id = ObjectId(file_id)
+                            
+                            # Update the file with successful code and output
+                            update_result = files_collection.update_one(
+                                {
+                                    "_id": file_obj_id,
+                                    "user_id": user_doc["_id"],
+                                    "type": "file"
+                                },
+                                {
+                                    "$set": {
+                                        "content": code,
+                                        "last_success_at": datetime.datetime.utcnow(),
+                                        "updated_at": datetime.datetime.utcnow()
+                                    }
+                                }
+                            )
+                            
+                            if update_result.modified_count > 0:
+                                logger.info(f"✅ File {file_id} saved after successful execution")
+                            else:
+                                logger.warning(f"⚠️ File {file_id} not found or not updated")
+            except Exception as e:
+                logger.error(f"❌ Error saving file after execution: {e}")
+
         response_data = {
             "output": output,
             "success": success
@@ -288,17 +321,14 @@ def run_code():
 
     except requests.exceptions.Timeout:
         logger.error("Piston execution timeout")
-        logger.info("❌ ERROR: Piston execution timeout")
         return jsonify({"error": "Execution timeout (max 15 seconds)"}), 408
         
     except requests.exceptions.RequestException as e:
         logger.error(f"Error communicating with Piston: {e}")
-        logger.info(f"❌ ERROR: Could not communicate with Piston: {e}")
         return jsonify({"error": f"Could not execute code: {str(e)}"}), 500
         
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
-        logger.info(f"❌ UNEXPECTED ERROR: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
@@ -667,9 +697,11 @@ def get_files(repo_id):
                 serialized_item["content"] = item.get("content", "")
             
             serialized_items.append(serialized_item)
+
+            
         
         # Step 8: Return the items list
-        logger.info(f"Found {len(serialized_items)} items in repository")
+        logger.info(f"\n\n\nFound {len(serialized_items)} items in repository\n\n{serialized_items}")
         return jsonify({"files": serialized_items}), 200
     
     except Exception as e:

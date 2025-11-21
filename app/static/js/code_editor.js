@@ -652,6 +652,8 @@ function runCode() {
         }
     }
 
+
+
     const languageNames = {
         'python': 'Python',
         'javascript': 'JavaScript',
@@ -668,7 +670,9 @@ function runCode() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             code: code,
-            language: currentLanguage
+            language: currentLanguage,
+            file_id:activeTabId
+
         })
     })
     .then(response => response.json())
