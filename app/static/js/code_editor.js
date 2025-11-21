@@ -55,7 +55,11 @@ initTerminal();
 require(['vs/editor/editor.main'], function () {
     // Create the editor
     editorInstance = monaco.editor.create(document.getElementById('editor'), {
-        value: '// Select a file from the explorer to start coding',
+        value: `// Welcome to CODEX!
+// Select a file from the explorer to start coding,
+// or create a new file using the buttons above.
+// Happy coding!`,
+
         language: 'javascript',
         theme: 'vs-dark',
         automaticLayout: true,
@@ -65,7 +69,8 @@ require(['vs/editor/editor.main'], function () {
         wordWrap: 'on',
         tabSize: 4,
         insertSpaces: true,
-        detectIndentation: true
+        detectIndentation: true,
+        readOnly: true  
     });
 
     editorInstance.onDidChangeModelContent(() => {
@@ -157,9 +162,24 @@ function switchToTab(tabId) {
 
 function loadTabIntoEditor(tab) {
     if (!editorInstance) return;
-    
+
+    // Enable editor typing when a file is opened
     editorInstance.setValue(tab.content || '');
-    
+    editorInstance.updateOptions({ readOnly: false });
+
+    // Initialize terminal if it hasn't been created yet
+    if (!terminal) {
+        initTerminal();
+    }
+
+    // Show terminal panel
+    const terminalPanel = document.querySelector('.terminal-panel');
+    if (terminalPanel) {
+        terminalPanel.style.display = 'flex'; // show panel
+        terminalPanel.classList.remove('closed'); // remove "closed" class if present
+    }
+
+    // Map languages to Monaco
     const languageMap = {
         'python': 'python',
         'javascript': 'javascript',
@@ -167,10 +187,10 @@ function loadTabIntoEditor(tab) {
         'cpp': 'cpp',
         'c': 'c'
     };
-    
+
     const monacoLanguage = languageMap[tab.language] || 'plaintext';
     monaco.editor.setModelLanguage(editorInstance.getModel(), monacoLanguage);
-    
+
     // Set language-specific indentation
     const model = editorInstance.getModel();
     switch(tab.language) {
@@ -181,8 +201,6 @@ function loadTabIntoEditor(tab) {
             model.updateOptions({ tabSize: 2, insertSpaces: true });
             break;
         case 'java':
-            model.updateOptions({ tabSize: 4, insertSpaces: true });
-            break;
         case 'cpp':
         case 'c':
             model.updateOptions({ tabSize: 4, insertSpaces: true });
@@ -191,6 +209,7 @@ function loadTabIntoEditor(tab) {
             model.updateOptions({ tabSize: 4, insertSpaces: true });
     }
 }
+
 
 function closeTab(tabId, event) {
     if (event) {
@@ -220,6 +239,7 @@ function closeTab(tabId, event) {
             activeTabId = null;
             if (editorInstance) {
                 editorInstance.setValue('// Select a file from the explorer to start coding');
+                editorInstance.updateOptions({ readOnly: true }); 
             }
         }
     }

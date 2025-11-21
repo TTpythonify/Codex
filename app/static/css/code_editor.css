@@ -393,7 +393,7 @@ body {
     height: 250px;
     background: #0d1117;
     border-top: 1px solid #30363d;
-    display: flex;
+    display: none;
     flex-direction: column;
     resize: vertical;
     overflow: hidden;
