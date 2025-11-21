@@ -36,8 +36,7 @@ def serialize_doc(doc):
 # -----------------------------
 @repo_routes.route("/create_repo", methods=["POST"])
 def create_repo():
-    logger.info("Creating a new repository...")
-    
+
     if not github.authorized:
         return jsonify({"message": "User not authenticated with GitHub"}), 401
 
@@ -101,8 +100,6 @@ def create_repo():
         saved_repo = repositories_collection.find_one({"_id": insert_result.inserted_id})
         saved_repo_serialized = serialize_doc(saved_repo)
 
-        logger.info(f"Repository '{repo_name}' added to DB for user '{github_username}'")
-
         return jsonify({
             "message": f"Repository '{repo_name}' created successfully",
             "repo": saved_repo_serialized
@@ -119,8 +116,6 @@ def create_repo():
 
 @repo_routes.route("/repo/<repo_id>")
 def repo_page(repo_id):
-    logger.info(f"Accessing repository page: {repo_id}")
-
     if not github.authorized:
         return redirect(url_for("main.login_page"))
 
@@ -154,10 +149,6 @@ def repo_page(repo_id):
             logger.error(f"Repository {repo_id} not found or not owned by user {github_username}")
             return redirect(url_for("main.home"))
 
-        # Fetch all files in this repo - NO NEED TO PASS TO TEMPLATE
-        # Files will be loaded via AJAX call from frontend
-        logger.info(f"Successfully loaded repository page for {repo_doc['name']}")
-
         return render_template(
             "code_editor.html",
             repo=repo_doc,
@@ -174,7 +165,6 @@ def repo_page(repo_id):
 
 @repo_routes.route("/run_code", methods=["POST"])
 def run_code():
-    logger.info("Code execution requested")
 
     # Get code and language from frontend
     data = request.get_json()
@@ -182,7 +172,6 @@ def run_code():
     language = data.get("language", "python")  # Get language from request
     file_id = data.get("file_id")
     
-    logger.info(f"\n\nTab:{file_id} \n\n")
 
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
@@ -345,9 +334,7 @@ def create_folder():
         "folder_name": "src",
         "parent_id": null  // or another folder's ID for nested folders
     }
-    """
-    logger.info("Folder creation requested")
-    
+    """    
     try:
         # Step 1: Check if user is authenticated with GitHub
         if not github.authorized:
@@ -438,9 +425,7 @@ def create_folder():
             full_path = f"{parent_path}/{folder_name}"
         else:
             full_path = folder_name
-        
-        logger.info(f"Creating folder at path: {full_path}")
-        
+                
         # Step 10: Check if folder already exists at this location
         existing_folder = files_collection.find_one({
             "repo_id": repo_doc["_id"],
@@ -466,7 +451,6 @@ def create_folder():
         
         # Step 12: Insert the folder into the database
         insert_result = files_collection.insert_one(folder_doc)
-        logger.info(f"Folder created with ID: {insert_result.inserted_id}")
         
         # Step 13: Fetch the newly created folder
         saved_folder = files_collection.find_one({"_id": insert_result.inserted_id})
@@ -486,9 +470,7 @@ def create_folder():
         return jsonify({"error": f"Failed to create folder: {str(e)}"}), 500
     
 @repo_routes.route("/create_file", methods=["POST"])
-def create_file():
-    logger.info("File creation requested")
-    
+def create_file():    
     try:
         # Step 1: Check authentication
         if not github.authorized:
@@ -585,8 +567,6 @@ def create_file():
         else:
             full_path = file_name
         
-        logger.info(f"Creating file at path: {full_path}")
-        
         # Step 10: Check if file already exists at this location
         existing_file = files_collection.find_one({
             "repo_id": repo_doc["_id"],
@@ -613,9 +593,7 @@ def create_file():
         }
         
         # Step 12: Insert into database
-        insert_result = files_collection.insert_one(file_doc)
-        logger.info(f"File created with ID: {insert_result.inserted_id}")
-        
+        insert_result = files_collection.insert_one(file_doc)        
         # Step 13: Fetch newly created file
         saved_file = files_collection.find_one({"_id": insert_result.inserted_id})
         
@@ -698,10 +676,6 @@ def get_files(repo_id):
             
             serialized_items.append(serialized_item)
 
-            
-        
-        # Step 8: Return the items list
-        logger.info(f"\n\n\nFound {len(serialized_items)} items in repository\n\n{serialized_items}")
         return jsonify({"files": serialized_items}), 200
     
     except Exception as e:
