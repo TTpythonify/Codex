@@ -469,6 +469,7 @@ def create_folder():
         traceback.print_exc()
         return jsonify({"error": f"Failed to create folder: {str(e)}"}), 500
     
+
 @repo_routes.route("/create_file", methods=["POST"])
 def create_file():    
     try:
@@ -578,20 +579,59 @@ def create_file():
         if existing_file:
             return jsonify({"error": f"A file named '{file_name}' already exists at this location"}), 409
         
+        if language == "java":
+            from .helper_functions import to_java_class_name
+
+            # Convert input into Java class name
+            class_name = to_java_class_name(file_name)
+
+            # Final Java file name
+            file_name = f"{class_name}.java"
+
+            # Rebuild full path now that the file name changed
+            if parent_path:
+                full_path = f"{parent_path}/{file_name}"
+            else:
+                full_path = file_name
+
+            # Default Java template
+            content = f"""public class {class_name} {{
+    public static void main(String[] args) {{
+        // Write your code 
+    }}
+}}
+        """
+
+            file_doc = {
+                "repo_id": repo_doc["_id"],
+                "user_id": user_doc["_id"],
+                "type": "file",
+                "name": file_name,
+                "parent_id": parent_obj_id,
+                "path": full_path,
+                "language": language,
+                "content": content,
+                "created_at": datetime.datetime.utcnow(),
+                "updated_at": datetime.datetime.utcnow()
+            }
+
+
+            
+        else:
         # Step 11: Create file document
-        file_doc = {
-            "repo_id": repo_doc["_id"],
-            "user_id": user_doc["_id"],
-            "type": "file",
-            "name": file_name,
-            "parent_id": parent_obj_id,
-            "path": full_path,
-            "language": language,
-            "content": content,
-            "created_at": datetime.datetime.utcnow(),
-            "updated_at": datetime.datetime.utcnow()
-        }
-        
+            file_doc = {
+                "repo_id": repo_doc["_id"],
+                "user_id": user_doc["_id"],
+                "type": "file",
+                "name": file_name,
+                "parent_id": parent_obj_id,
+                "path": full_path,
+                "language": language,
+                "content": content,
+                "created_at": datetime.datetime.utcnow(),
+                "updated_at": datetime.datetime.utcnow()
+            }
+            
         # Step 12: Insert into database
         insert_result = files_collection.insert_one(file_doc)        
         # Step 13: Fetch newly created file

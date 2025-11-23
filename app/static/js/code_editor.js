@@ -474,6 +474,7 @@ function getFileExtension(language) {
     return extensionMap[language] || '';
 }
 
+
 document.getElementById('createFileBtn').addEventListener('click', async () => {
     const fileName = document.getElementById('newFileName').value.trim();
     const language = document.getElementById('fileLanguage').value;
@@ -525,7 +526,6 @@ document.getElementById('createFileBtn').addEventListener('click', async () => {
                 language: data.file.language,
                 content: data.file.content || ''
             };
-            openFileInTab(newFile);
             
         } else {
             alert(`Error: ${data.error || data.message || 'Failed to create file'}`);
@@ -536,6 +536,8 @@ document.getElementById('createFileBtn').addEventListener('click', async () => {
         alert('Failed to create file. Please try again.');
     }
 });
+
+
 
 // ============================================================================
 // FILE TREE DISPLAY
