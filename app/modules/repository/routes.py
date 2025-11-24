@@ -325,261 +325,198 @@ def run_code():
 
 @repo_routes.route("/create_folder", methods=["POST"])
 def create_folder():
-    """
-    Creates a new folder in the repository
-    
-    Expected JSON body:
-    {
-        "repo_id": "507f1f77bcf86cd799439011",
-        "folder_name": "src",
-        "parent_id": null  // or another folder's ID for nested folders
-    }
-    """    
     try:
-        # Step 1: Check if user is authenticated with GitHub
         if not github.authorized:
             return jsonify({"error": "Not authenticated with GitHub"}), 401
         
-        # Step 2: Get the request JSON data
         data = request.get_json()
         repo_id = data.get("repo_id")
         folder_name = data.get("folder_name")
-        parent_id = data.get("parent_id")  # This can be None/null
+        parent_id = data.get("parent_id")  # None for root
         
-        # Step 3: Validate required fields
-        if not repo_id:
-            return jsonify({"error": "Repository ID is required"}), 400
+        if not repo_id or not folder_name or not folder_name.strip():
+            return jsonify({"error": "Repository ID and folder name are required"}), 400
         
-        if not folder_name or not folder_name.strip():
-            return jsonify({"error": "Folder name is required"}), 400
-        
-        # Sanitize folder name (remove leading/trailing spaces, check for invalid characters)
         folder_name = folder_name.strip()
-        
-        # Check for invalid characters in folder name
         invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
         if any(char in folder_name for char in invalid_chars):
             return jsonify({"error": f"Folder name cannot contain: {', '.join(invalid_chars)}"}), 400
         
-        # Step 4: Get the authenticated GitHub user information
-        try:
-            user_resp = github.get("/user")
-            if not user_resp.ok:
-                return jsonify({"error": "Failed to fetch GitHub user details"}), 401
-            github_username = user_resp.json()["login"]
-        except Exception as e:
-            logger.error(f"Error fetching GitHub user: {e}")
-            return jsonify({"error": "Failed to authenticate with GitHub"}), 401
-        
-        # Step 5: Find the user in the database
+        # Get authenticated user
+        user_resp = github.get("/user")
+        if not user_resp.ok:
+            return jsonify({"error": "Failed to fetch GitHub user details"}), 401
+        github_username = user_resp.json()["login"]
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
-            return jsonify({"error": "User not found in database"}), 404
-        
-        # Step 6: Convert repo_id string to ObjectId
+            return jsonify({"error": "User not found"}), 404
+
+        # Verify repository
         try:
             repo_obj_id = ObjectId(repo_id)
-        except Exception as e:
-            logger.error(f"Invalid repo_id format: {e}")
-            return jsonify({"error": "Invalid repository ID format"}), 400
-        
-        # Step 7: Find the repository in database and verify ownership
-        repo_doc = repositories_collection.find_one({
-            "_id": repo_obj_id,
-            "user_id": user_doc["_id"]
-        })
-        
+        except Exception:
+            return jsonify({"error": "Invalid repository ID"}), 400
+
+        repo_doc = repositories_collection.find_one({"_id": repo_obj_id, "user_id": user_doc["_id"]})
         if not repo_doc:
             return jsonify({"error": "Repository not found or access denied"}), 404
-        
-        # Step 8: Handle parent_id logic
+
+        # Handle parent folder
         parent_obj_id = None
         parent_path = ""
-        
-        if parent_id:  # If parent_id is provided (not None, not empty string)
+        if parent_id:
             try:
                 parent_obj_id = ObjectId(parent_id)
-            except Exception as e:
-                logger.error(f"Invalid parent_id format: {e}")
-                return jsonify({"error": "Invalid parent ID format"}), 400
-            
-            # Find the parent folder
+            except Exception:
+                return jsonify({"error": "Invalid parent ID"}), 400
             parent_doc = files_collection.find_one({
                 "_id": parent_obj_id,
                 "repo_id": repo_doc["_id"],
                 "user_id": user_doc["_id"]
             })
-            
-            if not parent_doc:
-                return jsonify({"error": "Parent folder not found"}), 404
-            
-            # Verify parent is a folder, not a file
-            if parent_doc.get("type") != "folder":
-                return jsonify({"error": "Parent must be a folder, not a file"}), 400
-            
-            # Get parent's path for building full path
+            if not parent_doc or parent_doc.get("type") != "folder":
+                return jsonify({"error": "Parent must be a valid folder"}), 400
             parent_path = parent_doc.get("path", "")
-        
-        # Step 9: Build the full path
-        if parent_path:
-            full_path = f"{parent_path}/{folder_name}"
-        else:
-            full_path = folder_name
-                
-        # Step 10: Check if folder already exists at this location
+
+        # Build full path
+        full_path = f"{parent_path}/{folder_name}" if parent_path else folder_name
+
+        # Duplicate check for folder
         existing_folder = files_collection.find_one({
             "repo_id": repo_doc["_id"],
             "parent_id": parent_obj_id,
             "name": folder_name,
             "type": "folder"
         })
-        
         if existing_folder:
-            return jsonify({"error": f"A folder named '{folder_name}' already exists at this location"}), 409
-        
-        # Step 11: Create the folder document
+            return jsonify({"error": f"A folder named '{folder_name}' already exists in this location"}), 409
+
+        # Create folder document
         folder_doc = {
             "repo_id": repo_doc["_id"],
             "user_id": user_doc["_id"],
             "type": "folder",
             "name": folder_name,
-            "parent_id": parent_obj_id,  # None for root-level, ObjectId for nested
+            "parent_id": parent_obj_id,
             "path": full_path,
             "created_at": datetime.datetime.utcnow(),
             "updated_at": datetime.datetime.utcnow()
         }
-        
-        # Step 12: Insert the folder into the database
+
         insert_result = files_collection.insert_one(folder_doc)
-        
-        # Step 13: Fetch the newly created folder
         saved_folder = files_collection.find_one({"_id": insert_result.inserted_id})
-        
-        # Step 14: Serialize and return
         saved_folder_serialized = serialize_doc(saved_folder)
-        
+
         return jsonify({
             "message": f"Folder '{folder_name}' created successfully",
             "folder": saved_folder_serialized
         }), 201
-    
+
     except Exception as e:
         logger.error(f"Error creating folder: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Failed to create folder: {str(e)}"}), 500
-    
 
+    
+    
 @repo_routes.route("/create_file", methods=["POST"])
-def create_file():    
+def create_file():
     try:
-        # Step 1: Check authentication
+        # 1. Authentication
         if not github.authorized:
             return jsonify({"error": "Not authenticated with GitHub"}), 401
-        
-        # Step 2: Get request data
+
         data = request.get_json()
         repo_id = data.get("repo_id")
         file_name = data.get("file_name")
         language = data.get("language", "python")
         content = data.get("content", "")
-        parent_id = data.get("parent_id")
-        
-        # Step 3: Validate required fields
-        if not repo_id:
-            return jsonify({"error": "Repository ID is required"}), 400
-        
-        if not file_name or not file_name.strip():
-            return jsonify({"error": "File name is required"}), 400
-        
+        parent_id = data.get("parent_id")  # None for root
+
+        # 2. Validate fields
+        if not repo_id or not file_name or not file_name.strip():
+            return jsonify({"error": "Repository ID and file name are required"}), 400
         file_name = file_name.strip()
-        
-        # Validate language is one of the allowed ones
+
         allowed_languages = ['python', 'javascript', 'java', 'cpp', 'c']
         if language not in allowed_languages:
             return jsonify({"error": f"Language must be one of: {', '.join(allowed_languages)}"}), 400
-        
-        # Check for invalid characters in file name
+
+        # 3. Invalid characters check
         invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
         if any(char in file_name for char in invalid_chars):
             return jsonify({"error": f"File name cannot contain: {', '.join(invalid_chars)}"}), 400
-        
-        # Step 4: Get authenticated user
-        try:
-            user_resp = github.get("/user")
-            if not user_resp.ok:
-                return jsonify({"error": "Failed to fetch GitHub user details"}), 401
-            github_username = user_resp.json()["login"]
-        except Exception as e:
-            logger.error(f"Error fetching GitHub user: {e}")
-            return jsonify({"error": "Failed to authenticate with GitHub"}), 401
-        
-        # Step 5: Find user in database
+
+        # 4. Get user
+        user_resp = github.get("/user")
+        if not user_resp.ok:
+            return jsonify({"error": "Failed to fetch GitHub user details"}), 401
+        github_username = user_resp.json()["login"]
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
-            return jsonify({"error": "User not found in database"}), 404
-        
-        # Step 6: Convert repo_id to ObjectId
+            return jsonify({"error": "User not found"}), 404
+
+        # 5. Verify repository
         try:
             repo_obj_id = ObjectId(repo_id)
-        except Exception as e:
-            logger.error(f"Invalid repo_id format: {e}")
-            return jsonify({"error": "Invalid repository ID format"}), 400
-        
-        # Step 7: Find repository and verify ownership
-        repo_doc = repositories_collection.find_one({
-            "_id": repo_obj_id,
-            "user_id": user_doc["_id"]
-        })
-        
+        except Exception:
+            return jsonify({"error": "Invalid repository ID"}), 400
+
+        repo_doc = repositories_collection.find_one({"_id": repo_obj_id, "user_id": user_doc["_id"]})
         if not repo_doc:
             return jsonify({"error": "Repository not found or access denied"}), 404
-        
-        # Step 8: Handle parent_id logic
+
+        # 6. Handle parent folder
         parent_obj_id = None
         parent_path = ""
-        
         if parent_id:
             try:
                 parent_obj_id = ObjectId(parent_id)
-            except Exception as e:
-                logger.error(f"Invalid parent_id format: {e}")
-                return jsonify({"error": "Invalid parent ID format"}), 400
-            
-            # Find parent folder
+            except Exception:
+                return jsonify({"error": "Invalid parent ID"}), 400
             parent_doc = files_collection.find_one({
                 "_id": parent_obj_id,
                 "repo_id": repo_doc["_id"],
                 "user_id": user_doc["_id"]
             })
-            
-            if not parent_doc:
-                return jsonify({"error": "Parent folder not found"}), 404
-            
-            # Verify parent is a folder, not a file
-            if parent_doc.get("type") != "folder":
-                return jsonify({"error": "Cannot create file inside another file. Parent must be a folder"}), 400
-            
+            if not parent_doc or parent_doc.get("type") != "folder":
+                return jsonify({"error": "Parent must be a valid folder"}), 400
             parent_path = parent_doc.get("path", "")
-        
-        # Step 9: Build full path
-        if parent_path:
-            full_path = f"{parent_path}/{file_name}"
-        else:
-            full_path = file_name
-        
-        # Step 10: Check if file already exists at this location
+
+        # 7. Adjust filename for Java
+        if language == "java":
+            from .helper_functions import to_java_class_name
+            class_name = to_java_class_name(file_name)
+            file_name = f"{class_name}.java"
+
+        # 8. Build full path
+        full_path = f"{parent_path}/{file_name}" if parent_path else file_name
+
+        # 9. Duplicate check (works for all languages)
         existing_file = files_collection.find_one({
             "repo_id": repo_doc["_id"],
             "parent_id": parent_obj_id,
             "name": file_name,
             "type": "file"
         })
-
         if existing_file:
-            return jsonify({"error": f"A file named '{file_name}' already exists at this location"}), 409
+            return jsonify({"error": f"A file named '{file_name}' already exists in this folder"}), 409
 
-        # Build the base file_doc
+        # 10. Prepare file content templates
+        if language == "java":
+            content = f"""public class {class_name} {{
+    public static void main(String[] args) {{
+        // Write your code here
+    }}
+}}"""
+        elif language in ("c", "cpp"):
+            content = """int main() {
+    // code goes here
+    return 0;
+}"""
+
+        # 11. Insert into DB
         file_doc = {
             "repo_id": repo_doc["_id"],
             "user_id": user_doc["_id"],
@@ -593,47 +530,22 @@ def create_file():
             "updated_at": datetime.datetime.utcnow()
         }
 
-        # Language-specific adjustments
-        if language == "java":
-            from .helper_functions import to_java_class_name
-            class_name = to_java_class_name(file_name)
-            file_name = f"{class_name}.java"
-            # Update file_doc with new name, path, and content
-            file_doc.update({
-                "name": file_name,
-                "path": f"{parent_path}/{file_name}" if parent_path else file_name,
-                "content": f"""public class {class_name} {{
-    public static void main(String[] args) {{
-        // Write your code 
-}}
-}}"""})
-
-        elif language in ("c", "cpp"):
-            # Update content for C/C++
-            file_doc["content"] = """int main() {
-    // code goes here
-    return 0;
-}"""
-
-            
-        # Step 12: Insert into database
-        insert_result = files_collection.insert_one(file_doc)        
-        # Step 13: Fetch newly created file
+        insert_result = files_collection.insert_one(file_doc)
         saved_file = files_collection.find_one({"_id": insert_result.inserted_id})
-        
-        # Step 14: Serialize and return
         saved_file_serialized = serialize_doc(saved_file)
-        
+
         return jsonify({
             "message": f"File '{file_name}' created successfully",
             "file": saved_file_serialized
         }), 201
-    
+
     except Exception as e:
         logger.error(f"Error creating file: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Failed to create file: {str(e)}"}), 500
+
+
     
 
 
