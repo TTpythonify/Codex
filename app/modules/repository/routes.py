@@ -177,7 +177,7 @@ def run_code():
     # Get code and language from frontend
     data = request.get_json()
     code = data.get("code", "")
-    language = data.get("language", "python")
+    language = data.get("language", "text")
     file_id = data.get("file_id")
     
     if not code.strip():
@@ -186,6 +186,9 @@ def run_code():
     # Basic validation
     if len(code) > 50000:  
         return jsonify({"error": "Code too long (max 50KB)"}), 400
+    # Ignore text files
+    if language == "text":
+        return #jsonify({"output": "", "success": True, "compile_stdout": "", "compile_stderr": ""})
 
     # Map frontend language to Piston language identifiers
     language_map = {
@@ -454,7 +457,7 @@ def create_file():
         data = request.get_json()
         repo_id = data.get("repo_id")
         file_name = data.get("file_name")
-        language = data.get("language", "python")
+        language = data.get("language", "text")
         content = data.get("content", "")
         parent_id = data.get("parent_id")  # None for root
 
@@ -463,7 +466,7 @@ def create_file():
             return jsonify({"error": "Repository ID and file name are required"}), 400
         file_name = file_name.strip()
 
-        allowed_languages = ['python', 'javascript', 'java', 'cpp', 'c']
+        allowed_languages = ['python', 'javascript', 'java', 'cpp', 'c','text']
         if language not in allowed_languages:
             return jsonify({"error": f"Language must be one of: {', '.join(allowed_languages)}"}), 400
 

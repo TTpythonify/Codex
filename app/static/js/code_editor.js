@@ -189,7 +189,8 @@ function loadTabIntoEditor(tab) {
         'javascript': 'javascript',
         'java': 'java',
         'cpp': 'cpp',
-        'c': 'c'
+        'c': 'c',
+        'text':'text'
     };
 
     const monacoLanguage = languageMap[tab.language] || 'plaintext';
@@ -209,9 +210,13 @@ function loadTabIntoEditor(tab) {
         case 'c':
             model.updateOptions({ tabSize: 4, insertSpaces: true });
             break;
+        case 'text':   
+            model.updateOptions({ tabSize: 4, insertSpaces: true });
+            break;
         default:
             model.updateOptions({ tabSize: 4, insertSpaces: true });
     }
+
 }
 
 function closeTab(tabId, event) {
@@ -258,7 +263,8 @@ function updateTabsUI() {
             'javascript': '📜',
             'java': '☕',
             'cpp': '⚙️',
-            'c': '🔧'
+            'c': '🔧',
+            'text': '📄'
         };
         const icon = iconMap[tab.language] || '📄';
         
@@ -399,20 +405,34 @@ function createInlineInput(type, parentId) {
 }
 
 
+
 async function createFileVSCode(fileName, parentId) {
     const repoId = document.getElementById('repoId').value;
-    
+
     // Determine language from extension
     const ext = fileName.split('.').pop().toLowerCase();
+
+    // Allowed executable languages
+    const execLanguages = ['py', 'js', 'java', 'cpp', 'c'];
+
+    // Map extensions to language names
     const languageMap = {
         'py': 'python',
         'js': 'javascript',
         'java': 'java',
         'cpp': 'cpp',
-        'c': 'c'
+        'c': 'c',
+        'txt': 'text'
     };
-    const language = languageMap[ext] || 'python';
-    
+
+    // If the extension is not executable, set language to text
+    const language = execLanguages.includes(ext) ? languageMap[ext] : 'text';
+
+    // Notify user if they are trying to create an unsupported executable file
+    if (!execLanguages.includes(ext) && ext !== 'txt') {
+        terminal.writeln(`\x1b[1;33m⚠ ${fileName} cannot be executed. Only Python, JavaScript, C, C++, and Java files can be run.\x1b[0m`);
+    }
+
     const requestBody = {
         repo_id: repoId,
         file_name: fileName,
@@ -420,16 +440,16 @@ async function createFileVSCode(fileName, parentId) {
         content: '',
         parent_id: parentId
     };
-    
+
     try {
         const response = await fetch('/create_file', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             await loadFileTree(repoId);
         } else {
@@ -440,6 +460,7 @@ async function createFileVSCode(fileName, parentId) {
         alert('Failed to create file. Please try again.');
     }
 }
+
 
 async function createFolderVSCode(folderName, parentId) {
     const repoId = document.getElementById('repoId').value;
@@ -628,7 +649,7 @@ function runCode() {
     }
 
     const code = editorInstance.getValue();
-    
+
     if (!code.trim()) {
         terminal.writeln('\x1b[1;33m⚠ No code to execute\x1b[0m\n');
         return;
@@ -641,6 +662,15 @@ function runCode() {
         if (activeTab) {
             currentLanguage = activeTab.language;
         }
+    }
+
+    // Allowed languages
+    const allowedLanguages = ['python', 'javascript', 'c', 'cpp', 'java'];
+
+    // Check if the current file can be executed
+    if (!allowedLanguages.includes(currentLanguage)) {
+        terminal.writeln(`\x1b[1;33m⚠ Cannot execute ${currentLanguage} files. Only Python, JavaScript, C, C++, and Java are supported.\x1b[0m\n`);
+        return; // stop execution
     }
 
     const languageNames = {
@@ -673,7 +703,7 @@ function runCode() {
             lines.forEach(line => {
                 terminal.writeln(line);
             });
-            
+
             if (data.success !== false) {
                 terminal.writeln('\x1b[1;32m✓ Execution completed successfully\x1b[0m');
             } else {
