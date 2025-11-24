@@ -846,3 +846,49 @@ body {
 .tab-name::after {
     content: '';
 }
+
+
+
+/* Inline Create Input Styling */
+.inline-create-input {
+    margin: 2px 0;
+}
+
+.file-tree-item.creating {
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid #58a6ff;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inline-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #c9d1d9;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    outline: none;
+    padding: 2px 4px;
+}
+
+.inline-input::placeholder {
+    color: #6e7681;
+    font-style: italic;
+}
+
+/* File Tree Item Hover States */
+.file-tree-item {
+    position: relative;
+}
+
+.file-tree-item.folder:hover {
+    background: rgba(88, 166, 255, 0.08);
+}
+
+.file-tree-item.folder.selected {
+    background: rgba(88, 166, 255, 0.15);
+    border-left: 2px solid #58a6ff;
+}

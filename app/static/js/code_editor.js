@@ -7,6 +7,9 @@ let terminal = null;
 let openTabs = []; 
 let activeTabId = null; 
 
+// Track selected folder for new file/folder creation
+let selectedFolderId = null;
+
 // Initialize xterm.js terminal first (before Monaco loads)
 function initTerminal() {
     if (typeof Terminal === 'undefined') {
@@ -175,8 +178,8 @@ function loadTabIntoEditor(tab) {
     // Show terminal panel
     const terminalPanel = document.querySelector('.terminal-panel');
     if (terminalPanel) {
-        terminalPanel.style.display = 'flex'; // show panel
-        terminalPanel.classList.remove('closed'); // remove "closed" class if present
+        terminalPanel.style.display = 'flex';
+        terminalPanel.classList.remove('closed');
     }
 
     // Map languages to Monaco
@@ -210,7 +213,6 @@ function loadTabIntoEditor(tab) {
     }
 }
 
-
 function closeTab(tabId, event) {
     if (event) {
         event.stopPropagation();
@@ -238,7 +240,6 @@ function closeTab(tabId, event) {
 
     updateTabsUI();
 }
-
 
 function updateTabsUI() {
     const tabsContainer = document.querySelector('.tabs-container');
@@ -284,78 +285,137 @@ function updateTabsUI() {
 }
 
 // ============================================================================
-// FOLDER CREATION FUNCTIONALITY
+// VSCODE-STYLE FILE/FOLDER CREATION
 // ============================================================================
 
-document.getElementById('newFolderBtn').addEventListener('click', async () => {
-    const modal = document.getElementById('createFolderModal');
-    modal.style.display = 'flex';
-    
+// New File Button - Creates inline input in file tree
+document.getElementById('newFileBtn').addEventListener('click', () => {
+    createInlineInput('file', selectedFolderId);
+});
+
+// New Folder Button - Creates inline input in file tree
+document.getElementById('newFolderBtn').addEventListener('click', () => {
+    createInlineInput('folder', selectedFolderId);
+});
+
+// Refresh Button
+document.getElementById('refreshBtn').addEventListener('click', () => {
     const repoId = document.getElementById('repoId').value;
-    await loadFoldersIntoDropdown(repoId);
+    loadFileTree(repoId);
 });
 
-document.getElementById('closeFolderModal').addEventListener('click', () => {
-    closeFolderModal();
-});
-
-document.getElementById('cancelFolderBtn').addEventListener('click', () => {
-    closeFolderModal();
-});
-
-window.addEventListener('click', (e) => {
-    const modal = document.getElementById('createFolderModal');
-    if (e.target === modal) {
-        closeFolderModal();
+function createInlineInput(type, parentId) {
+    // Remove any existing inline inputs first
+    const existingInput = document.querySelector('.inline-create-input');
+    if (existingInput) {
+        existingInput.remove();
     }
-});
 
-function closeFolderModal() {
-    const modal = document.getElementById('createFolderModal');
-    modal.style.display = 'none';
-    document.getElementById('newFolderName').value = '';
-    document.getElementById('parentFolderSelect').innerHTML = '<option value="">📁 Root (top level)</option>';
+    const fileTreeContainer = document.getElementById('fileTreeContainer');
+    
+    // Create inline input element
+    const inputContainer = document.createElement('div');
+    inputContainer.className = 'inline-create-input';
+    inputContainer.style.paddingLeft = parentId ? '24px' : '8px';
+    
+    const icon = type === 'folder' ? '📁' : '📄';
+    
+    inputContainer.innerHTML = `
+        <div class="file-tree-item creating">
+            <span class="tree-icon">${icon}</span>
+            <input 
+                type="text" 
+                class="inline-input" 
+                placeholder="${type === 'folder' ? 'Folder name' : 'filename.ext'}"
+                autofocus
+            />
+        </div>
+    `;
+    
+    // Insert at the beginning or after selected folder
+    if (parentId) {
+        const parentElement = document.querySelector(`[data-folder-id="${parentId}"]`);
+        if (parentElement) {
+            const childContainer = parentElement.nextElementSibling;
+            if (childContainer && childContainer.classList.contains('tree-children')) {
+                childContainer.style.display = 'block';
+                parentElement.classList.add('expanded');
+                childContainer.insertBefore(inputContainer, childContainer.firstChild);
+            }
+        }
+    } else {
+        fileTreeContainer.insertBefore(inputContainer, fileTreeContainer.firstChild);
+    }
+    
+    const input = inputContainer.querySelector('.inline-input');
+    input.focus();
+    
+    // Handle Enter key - Create file/folder
+    input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            const name = input.value.trim();
+            if (name) {
+                if (type === 'file') {
+                    await createFileVSCode(name, parentId);
+                } else {
+                    await createFolderVSCode(name, parentId);
+                }
+            }
+            inputContainer.remove();
+        } else if (e.key === 'Escape') {
+            inputContainer.remove();
+        }
+    });
+    
+    // Handle blur - Cancel creation
+    input.addEventListener('blur', () => {
+        setTimeout(() => inputContainer.remove(), 200);
+    });
 }
 
-async function loadFoldersIntoDropdown(repoId) {
+async function createFileVSCode(fileName, parentId) {
+    const repoId = document.getElementById('repoId').value;
+    
+    // Determine language from extension
+    const ext = fileName.split('.').pop().toLowerCase();
+    const languageMap = {
+        'py': 'python',
+        'js': 'javascript',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c'
+    };
+    const language = languageMap[ext] || 'python';
+    
+    const requestBody = {
+        repo_id: repoId,
+        file_name: fileName,
+        language: language,
+        content: '',
+        parent_id: parentId
+    };
+    
     try {
-        const response = await fetch(`/get_files/${repoId}`);
+        const response = await fetch('/create_file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+        
         const data = await response.json();
         
         if (response.ok) {
-            const dropdown = document.getElementById('parentFolderSelect');
-            dropdown.innerHTML = '<option value="">📁 Root (top level)</option>';
-            
-            const folders = data.files.filter(f => f.type === 'folder');
-            folders.sort((a, b) => a.path.localeCompare(b.path));
-            
-            folders.forEach(folder => {
-                const option = document.createElement('option');
-                option.value = folder.id;
-                
-                const depth = (folder.path.match(/\//g) || []).length;
-                const indent = '  '.repeat(depth);
-                option.textContent = `${indent}📁 ${folder.path}`;
-                
-                dropdown.appendChild(option);
-            });
-            
-            console.log(`Loaded ${folders.length} folders into dropdown`);
+            await loadFileTree(repoId);
+        } else {
+            alert(`Error: ${data.error || 'Failed to create file'}`);
         }
     } catch (error) {
-        console.error('Error loading folders:', error);
+        console.error('Error creating file:', error);
+        alert('Failed to create file. Please try again.');
     }
 }
 
-document.getElementById('createFolderBtn').addEventListener('click', async () => {
-    const folderName = document.getElementById('newFolderName').value.trim();
-    const parentId = document.getElementById('parentFolderSelect').value || null;
-    
-    if (!folderName) {
-        alert('Please enter a folder name');
-        return;
-    }
-    
+async function createFolderVSCode(folderName, parentId) {
     const repoId = document.getElementById('repoId').value;
     
     const requestBody = {
@@ -364,171 +424,25 @@ document.getElementById('createFolderBtn').addEventListener('click', async () =>
         parent_id: parentId
     };
     
-    console.log('Creating folder with:', requestBody);
-    
     try {
         const response = await fetch('/create_folder', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
         });
         
         const data = await response.json();
         
         if (response.ok) {
-            closeFolderModal();
-            loadFileTree(repoId);
+            await loadFileTree(repoId);
         } else {
-            alert(`Error: ${data.error || data.message || 'Failed to create folder'}`);
+            alert(`Error: ${data.error || 'Failed to create folder'}`);
         }
-        
     } catch (error) {
         console.error('Error creating folder:', error);
         alert('Failed to create folder. Please try again.');
     }
-});
-
-// ============================================================================
-// FILE CREATION FUNCTIONALITY
-// ============================================================================
-
-document.getElementById('newFileBtn').addEventListener('click', async () => {
-    const modal = document.getElementById('createFileModal');
-    modal.style.display = 'flex';
-    
-    const repoId = document.getElementById('repoId').value;
-    await loadFoldersIntoFileDropdown(repoId);
-});
-
-document.getElementById('closeFileModal').addEventListener('click', () => {
-    closeFileModal();
-});
-
-document.getElementById('cancelFileBtn').addEventListener('click', () => {
-    closeFileModal();
-});
-
-window.addEventListener('click', (e) => {
-    const fileModal = document.getElementById('createFileModal');
-    if (e.target === fileModal) {
-        closeFileModal();
-    }
-});
-
-function closeFileModal() {
-    const modal = document.getElementById('createFileModal');
-    modal.style.display = 'none';
-    document.getElementById('newFileName').value = '';
-    document.getElementById('fileLanguage').value = 'python';
-    document.getElementById('parentFileSelect').innerHTML = '<option value="">📁 Root (top level)</option>';
 }
-
-async function loadFoldersIntoFileDropdown(repoId) {
-    try {
-        const response = await fetch(`/get_files/${repoId}`);
-        const data = await response.json();
-        
-        if (response.ok) {
-            const dropdown = document.getElementById('parentFileSelect');
-            dropdown.innerHTML = '<option value="">📁 Root (top level)</option>';
-            
-            const folders = data.files.filter(f => f.type === 'folder');
-            folders.sort((a, b) => a.path.localeCompare(b.path));
-            
-            folders.forEach(folder => {
-                const option = document.createElement('option');
-                option.value = folder.id;
-                
-                const depth = (folder.path.match(/\//g) || []).length;
-                const indent = '  '.repeat(depth);
-                option.textContent = `${indent}📁 ${folder.path}`;
-                
-                dropdown.appendChild(option);
-            });
-            
-            console.log(`Loaded ${folders.length} folders into file dropdown`);
-        }
-    } catch (error) {
-        console.error('Error loading folders for file creation:', error);
-    }
-}
-
-function getFileExtension(language) {
-    const extensionMap = {
-        'python': '.py',
-        'javascript': '.js',
-        'java': '.java',
-        'cpp': '.cpp',
-        'c': '.c'
-    };
-    return extensionMap[language] || '';
-}
-
-
-document.getElementById('createFileBtn').addEventListener('click', async () => {
-    const fileName = document.getElementById('newFileName').value.trim();
-    const language = document.getElementById('fileLanguage').value;
-    const parentId = document.getElementById('parentFileSelect').value || null;
-    
-    if (!fileName) {
-        alert('Please enter a file name');
-        return;
-    }
-    
-    const extension = getFileExtension(language);
-    const fullFileName = fileName + extension;
-    
-    const repoId = document.getElementById('repoId').value;
-    
-    const requestBody = {
-        repo_id: repoId,
-        file_name: fullFileName,
-        language: language,
-        content: '',
-        parent_id: parentId
-    };
-    
-    console.log('Creating file with:', requestBody);
-    
-    try {
-        const response = await fetch('/create_file', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            closeFileModal();
-            
-            // Refresh file tree
-            await loadFileTree(repoId);
-            
-            // Open the newly created file in a tab
-            const newFile = {
-                id: data.file.id,
-                name: data.file.name,
-                path: data.file.path,
-                language: data.file.language,
-                content: data.file.content || ''
-            };
-            
-        } else {
-            alert(`Error: ${data.error || data.message || 'Failed to create file'}`);
-        }
-        
-    } catch (error) {
-        console.error('Error creating file:', error);
-        alert('Failed to create file. Please try again.');
-    }
-});
-
-
 
 // ============================================================================
 // FILE TREE DISPLAY
@@ -599,6 +513,9 @@ function renderTree(items, container, depth) {
                     e.stopPropagation();
                     childContainer.style.display = childContainer.style.display === 'none' ? 'block' : 'none';
                     itemElement.classList.toggle('expanded');
+                    
+                    // Set selected folder for new file/folder creation
+                    selectedFolderId = item.id;
                 }
             });
         }
@@ -611,12 +528,19 @@ function createTreeItemElement(item, depth) {
     div.style.paddingLeft = `${depth * 16 + 8}px`;
     
     if (item.type === 'folder') {
+        div.setAttribute('data-folder-id', item.id);
         div.innerHTML = `
             <svg class="tree-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25v-8.5A1.75 1.75 0 0014.25 3H7.5a.25.25 0 01-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"/>
             </svg>
             <span>${item.name}</span>
         `;
+        
+        // Right-click context menu for folders
+        div.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            selectedFolderId = item.id;
+        });
     } else {
         div.innerHTML = `
             <svg class="tree-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -657,15 +581,13 @@ function runCode() {
     }
 
     // Get the current language from the active tab
-    let currentLanguage = 'python'; // Default
+    let currentLanguage = 'python';
     if (activeTabId) {
         const activeTab = openTabs.find(t => t.id === activeTabId);
         if (activeTab) {
             currentLanguage = activeTab.language;
         }
     }
-
-
 
     const languageNames = {
         'python': 'Python',
@@ -684,8 +606,7 @@ function runCode() {
         body: JSON.stringify({ 
             code: code,
             language: currentLanguage,
-            file_id:activeTabId
-
+            file_id: activeTabId
         })
     })
     .then(response => response.json())
