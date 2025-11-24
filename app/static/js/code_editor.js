@@ -215,21 +215,13 @@ function closeTab(tabId, event) {
     if (event) {
         event.stopPropagation();
     }
-    
+
     const tabIndex = openTabs.findIndex(t => t.id === tabId);
     if (tabIndex === -1) return;
-    
-    const tab = openTabs[tabIndex];
-    
-    // Check if tab has unsaved changes
-    if (tab.isDirty) {
-        const confirmClose = confirm(`${tab.name} has unsaved changes. Close anyway?`);
-        if (!confirmClose) return;
-    }
-    
+
     // Remove tab
     openTabs.splice(tabIndex, 1);
-    
+
     // If closing active tab, switch to another
     if (activeTabId === tabId) {
         if (openTabs.length > 0) {
@@ -239,13 +231,14 @@ function closeTab(tabId, event) {
             activeTabId = null;
             if (editorInstance) {
                 editorInstance.setValue('// Select a file from the explorer to start coding');
-                editorInstance.updateOptions({ readOnly: true }); 
+                editorInstance.updateOptions({ readOnly: true });
             }
         }
     }
-    
+
     updateTabsUI();
 }
+
 
 function updateTabsUI() {
     const tabsContainer = document.querySelector('.tabs-container');
@@ -385,7 +378,6 @@ document.getElementById('createFolderBtn').addEventListener('click', async () =>
         const data = await response.json();
         
         if (response.ok) {
-            alert(`Folder "${folderName}" created successfully!`);
             closeFolderModal();
             loadFileTree(repoId);
         } else {
@@ -512,7 +504,6 @@ document.getElementById('createFileBtn').addEventListener('click', async () => {
         const data = await response.json();
         
         if (response.ok) {
-            alert(`File "${fullFileName}" created successfully!`);
             closeFileModal();
             
             // Refresh file tree
