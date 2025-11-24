@@ -848,7 +848,6 @@ body {
 }
 
 
-
 /* Inline Create Input Styling */
 .inline-create-input {
     margin: 2px 0;
@@ -882,6 +881,7 @@ body {
 /* File Tree Item Hover States */
 .file-tree-item {
     position: relative;
+    transition: all 0.15s ease;
 }
 
 .file-tree-item.folder:hover {
@@ -889,6 +889,22 @@ body {
 }
 
 .file-tree-item.folder.selected {
-    background: rgba(88, 166, 255, 0.15);
-    border-left: 2px solid #58a6ff;
+    background: rgba(88, 166, 255, 0.2) !important;
+    border-left: 3px solid #58a6ff;
+    padding-left: calc(8px + var(--depth) * 16px - 3px);
+}
+
+.file-tree-item.folder.selected .tree-icon {
+    color: #58a6ff;
+}
+
+.file-tree-item.folder.selected span {
+    color: #f0f6fc;
+    font-weight: 600;
+}
+
+/* Make file tree container take full height for clicking empty space */
+.file-tree {
+    min-height: 100%;
+    cursor: default;
 }

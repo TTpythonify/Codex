@@ -9,6 +9,7 @@ let activeTabId = null;
 
 // Track selected folder for new file/folder creation
 let selectedFolderId = null;
+let selectedFolderElement = null;
 
 // Initialize xterm.js terminal first (before Monaco loads)
 function initTerminal() {
@@ -302,6 +303,11 @@ document.getElementById('newFolderBtn').addEventListener('click', () => {
 document.getElementById('refreshBtn').addEventListener('click', () => {
     const repoId = document.getElementById('repoId').value;
     loadFileTree(repoId);
+    selectedFolderId = null;
+    if (selectedFolderElement) {
+        selectedFolderElement.classList.remove('selected');
+        selectedFolderElement = null;
+    }
 });
 
 function createInlineInput(type, parentId) {
@@ -334,16 +340,35 @@ function createInlineInput(type, parentId) {
     
     // Insert at the beginning or after selected folder
     if (parentId) {
+        // Find the parent folder element
         const parentElement = document.querySelector(`[data-folder-id="${parentId}"]`);
         if (parentElement) {
-            const childContainer = parentElement.nextElementSibling;
-            if (childContainer && childContainer.classList.contains('tree-children')) {
+            // Find or create the child container
+            let childContainer = parentElement.nextElementSibling;
+            
+            // If no child container exists, or it's not a tree-children container, create one
+            if (!childContainer || !childContainer.classList.contains('tree-children')) {
+                childContainer = document.createElement('div');
+                childContainer.className = 'tree-children';
                 childContainer.style.display = 'block';
-                parentElement.classList.add('expanded');
-                childContainer.insertBefore(inputContainer, childContainer.firstChild);
+                parentElement.after(childContainer);
+            } else {
+                // Make sure the container is visible
+                childContainer.style.display = 'block';
             }
+            
+            // Expand the parent folder
+            parentElement.classList.add('expanded');
+            
+            // Insert the input at the beginning of the child container
+            childContainer.insertBefore(inputContainer, childContainer.firstChild);
+        } else {
+            console.error('Parent folder not found:', parentId);
+            // Fallback to root level
+            fileTreeContainer.insertBefore(inputContainer, fileTreeContainer.firstChild);
         }
     } else {
+        // Root level - insert at the beginning
         fileTreeContainer.insertBefore(inputContainer, fileTreeContainer.firstChild);
     }
     
@@ -372,6 +397,7 @@ function createInlineInput(type, parentId) {
         setTimeout(() => inputContainer.remove(), 200);
     });
 }
+
 
 async function createFileVSCode(fileName, parentId) {
     const repoId = document.getElementById('repoId').value;
@@ -454,7 +480,6 @@ async function loadFileTree(repoId) {
         const data = await response.json();
         
         if (response.ok) {
-            console.log('Loaded files:', data.files);
             displayFileTree(data.files);
         } else {
             console.error('Error loading files:', data.error);
@@ -475,6 +500,14 @@ function displayFileTree(items) {
     
     const tree = buildTree(items);
     renderTree(tree, fileTreeContainer, 0);
+    
+    // Make the file tree container clickable for root selection
+    fileTreeContainer.addEventListener('click', (e) => {
+        // Only trigger if clicking the empty space (the container itself)
+        if (e.target === fileTreeContainer) {
+            selectFolder(null, null);
+        }
+    });
 }
 
 function buildTree(items) {
@@ -509,14 +542,23 @@ function renderTree(items, container, depth) {
             container.appendChild(childContainer);
             
             itemElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
                 if (item.type === 'folder') {
-                    e.stopPropagation();
-                    childContainer.style.display = childContainer.style.display === 'none' ? 'block' : 'none';
+                    // Toggle folder expansion
+                    const isExpanded = childContainer.style.display !== 'none';
+                    childContainer.style.display = isExpanded ? 'none' : 'block';
                     itemElement.classList.toggle('expanded');
                     
-                    // Set selected folder for new file/folder creation
-                    selectedFolderId = item.id;
+                    // Select this folder
+                    selectFolder(item.id, itemElement);
                 }
+            });
+        } else if (item.type === 'folder') {
+            // Empty folder - still make it selectable
+            itemElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectFolder(item.id, itemElement);
             });
         }
     });
@@ -535,12 +577,6 @@ function createTreeItemElement(item, depth) {
             </svg>
             <span>${item.name}</span>
         `;
-        
-        // Right-click context menu for folders
-        div.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            selectedFolderId = item.id;
-        });
     } else {
         div.innerHTML = `
             <svg class="tree-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -556,6 +592,24 @@ function createTreeItemElement(item, depth) {
     }
     
     return div;
+}
+
+// Helper function to select a folder
+function selectFolder(folderId, folderElement) {
+    // Clear previous selection
+    if (selectedFolderElement) {
+        selectedFolderElement.classList.remove('selected');
+    }
+    
+    // Set new selection
+    selectedFolderId = folderId;
+    selectedFolderElement = folderElement;
+    
+    if (folderElement) {
+        folderElement.classList.add('selected');
+    }
+    
+    console.log('Selected folder:', folderId === null ? 'Root' : folderId);
 }
 
 // ============================================================================
