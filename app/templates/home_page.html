@@ -137,6 +137,20 @@
 
                 </div>
             </section>
+
+            <section class="recent-section">
+                <div class="section-header">
+                    <h2>Recent Activity</h2>
+                    <a href="{{ url_for('main.activity_feed') }}" class="view-all">View All →</a>
+                </div>
+                <div class="activity-list" id="recentActivityList">
+                    <!-- Loading state -->
+                    <div class="activity-loading">
+                        <div class="spinner-small"></div>
+                        <span>Loading activities...</span>
+                    </div>
+                </div>
+            </section>
             
         </main>
     </div>

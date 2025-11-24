@@ -100,6 +100,16 @@ def create_repo():
         saved_repo = repositories_collection.find_one({"_id": insert_result.inserted_id})
         saved_repo_serialized = serialize_doc(saved_repo)
 
+        log_activity(
+            user_doc["_id"],
+            "create_repo",
+            f"Created repository '{repo_name}'",
+            f"New repository created with {'private' if private else 'public'} visibility",
+            repo_id=insert_result.inserted_id,
+            repo_name=repo_name,
+            metadata={"private": private, "description": description}
+        )
+
         return jsonify({
             "message": f"Repository '{repo_name}' created successfully",
             "repo": saved_repo_serialized
@@ -162,17 +172,14 @@ def repo_page(repo_id):
         return redirect(url_for("main.home"))
 
 
-
 @repo_routes.route("/run_code", methods=["POST"])
 def run_code():
-
     # Get code and language from frontend
     data = request.get_json()
     code = data.get("code", "")
-    language = data.get("language", "python")  # Get language from request
+    language = data.get("language", "python")
     file_id = data.get("file_id")
     
-
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
 
@@ -203,43 +210,31 @@ def run_code():
     
     # Determine the filename based on language
     if language == 'java':
-        # For Java, we need to extract the class name
         import re
         class_match = re.search(r'public\s+class\s+(\w+)', code)
         filename = f"{class_match.group(1)}.java" if class_match else "Main.java"
     else:
         filename = f"main.{file_extension}"
 
-    # Piston API format
     execution_data = {
         "language": piston_language,
         "version": "*",
-        "files": [
-            {
-                "name": filename,
-                "content": code
-            }
-        ],
+        "files": [{"name": filename, "content": code}],
         "stdin": "",
         "args": [],
-        "compile_timeout": 10000,  # 10 seconds
-        "run_timeout": 3000,       # 3 seconds
+        "compile_timeout": 10000,
+        "run_timeout": 3000,
         "compile_memory_limit": -1,
         "run_memory_limit": -1
     }
 
     try:
-        # Send code to Piston service
-        response = requests.post(
-            f"{PISTON_URL}/api/v2/execute",
-            json=execution_data,
-            timeout=15
-        )
+        # Execute code via Piston
+        response = requests.post(f"{PISTON_URL}/api/v2/execute", json=execution_data, timeout=15)
         response.raise_for_status()
         result = response.json()
 
-
-        # Get output from compile (for compiled languages) and run
+        # Get compile/run results
         compile_result = result.get("compile", {})
         run_result = result.get("run", {})
         
@@ -251,22 +246,19 @@ def run_code():
         stderr = run_result.get("stderr", "")
         exit_code = run_result.get("code", 0)
 
-
-        # Check for compilation errors first (for compiled languages)
+        # Determine output and success
         if compile_code != 0 and compile_stderr:
             output = f"Compilation Error:\n{compile_stderr}"
             success = False
         else:
-            # Combine outputs
             output = stdout if stdout else (stderr if stderr else "No output")
-            
-            # Check for runtime errors
             if exit_code != 0:
                 output = f"Runtime Error (exit code {exit_code}):\n{output}"
                 success = False
             else:
                 success = True
-        
+
+        # ✅ Update file in DB and log activity
         if success and file_id:
             try:
                 if github.authorized:
@@ -278,7 +270,11 @@ def run_code():
                         if user_doc:
                             file_obj_id = ObjectId(file_id)
                             
-                            # Update the file with successful code and output
+                            # Get file details for logging
+                            file_doc = files_collection.find_one({"_id": file_obj_id})
+                            repo_doc = repositories_collection.find_one({"_id": file_doc["repo_id"]}) if file_doc else None
+                            
+                            # Update the file
                             update_result = files_collection.update_one(
                                 {
                                     "_id": file_obj_id,
@@ -296,16 +292,32 @@ def run_code():
                             
                             if update_result.modified_count > 0:
                                 logger.info(f"✅ File {file_id} saved after successful execution")
+                                
+                                # Log activity
+                                if file_doc and repo_doc:
+                                    log_activity(
+                                        user_doc["_id"],
+                                        "run_code",
+                                        f"Executed {file_doc.get('name', 'file')}",
+                                        f"Successfully ran {language} code in {repo_doc['name']}",
+                                        repo_id=repo_doc["_id"],
+                                        repo_name=repo_doc["name"],
+                                        file_name=file_doc.get("name"),
+                                        language=language,
+                                        metadata={"lines": len(code.split('\n'))}
+                                    )
                             else:
                                 logger.warning(f"⚠️ File {file_id} not found or not updated")
             except Exception as e:
                 logger.error(f"❌ Error saving file after execution: {e}")
 
+        # Response to frontend
         response_data = {
             "output": output,
-            "success": success
+            "success": success,
+            "compile_stdout": compile_stdout,
+            "compile_stderr": compile_stderr
         }
-        
         return jsonify(response_data)
 
     except requests.exceptions.Timeout:
@@ -321,6 +333,8 @@ def run_code():
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
+
 
 
 @repo_routes.route("/create_folder", methods=["POST"])
@@ -406,6 +420,16 @@ def create_folder():
         insert_result = files_collection.insert_one(folder_doc)
         saved_folder = files_collection.find_one({"_id": insert_result.inserted_id})
         saved_folder_serialized = serialize_doc(saved_folder)
+
+        log_activity(
+            user_doc["_id"],
+            "create_folder",
+            f"Created folder '{folder_name}'",
+            f"New folder created in {repo_doc['name']}",
+            repo_id=repo_doc["_id"],
+            repo_name=repo_doc["name"],
+            file_name=folder_name
+        )
 
         return jsonify({
             "message": f"Folder '{folder_name}' created successfully",
@@ -533,6 +557,16 @@ def create_file():
         insert_result = files_collection.insert_one(file_doc)
         saved_file = files_collection.find_one({"_id": insert_result.inserted_id})
         saved_file_serialized = serialize_doc(saved_file)
+        log_activity(
+            user_doc["_id"],
+            "create_file",
+            f"Created file '{file_name}'",
+            f"New {language} file created in {repo_doc['name']}",
+            repo_id=repo_doc["_id"],
+            repo_name=repo_doc["name"],
+            file_name=file_name,
+            language=language
+        )
 
         return jsonify({
             "message": f"File '{file_name}' created successfully",
@@ -619,3 +653,103 @@ def get_files(repo_id):
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+    
+
+
+
+
+
+# Add these routes to your app/modules/repository/routes.py
+
+@repo_routes.route("/get_activities", methods=["GET"])
+def get_activities():
+    """
+    Fetch recent activities for the authenticated user
+    """
+    try:
+        if not github.authorized:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        # Get user
+        user_resp = github.get("/user")
+        if not user_resp.ok:
+            return jsonify({"error": "Failed to fetch user details"}), 401
+        github_username = user_resp.json()["login"]
+        user_doc = user_collection.find_one({"username": github_username})
+        
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Get limit from query params (default 20)
+        limit = int(request.args.get('limit', 20))
+        
+        # Fetch activities from database, sorted by timestamp descending
+        activities_cursor = db["codex_activities"].find(
+            {"user_id": user_doc["_id"]}
+        ).sort("timestamp", -1).limit(limit)
+        
+        activities = []
+        for activity in activities_cursor:
+            activities.append({
+                "id": str(activity["_id"]),
+                "type": activity.get("type"),
+                "title": activity.get("title"),
+                "description": activity.get("description"),
+                "repo_name": activity.get("repo_name"),
+                "repo_id": str(activity.get("repo_id")) if activity.get("repo_id") else None,
+                "file_name": activity.get("file_name"),
+                "language": activity.get("language"),
+                "timestamp": activity.get("timestamp").isoformat() if activity.get("timestamp") else None,
+                "metadata": activity.get("metadata", {})
+            })
+        
+        return jsonify({"activities": activities}), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching activities: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+
+def log_activity(user_id, activity_type, title, description, **kwargs):
+    """
+    Log a user activity to the database
+    
+    Args:
+        user_id: ObjectId of the user
+        activity_type: Type of activity (create_repo, create_file, run_code, etc.)
+        title: Short title for the activity
+        description: Detailed description
+        **kwargs: Additional metadata (repo_id, repo_name, file_name, language, etc.)
+    """
+    try:
+        activity_doc = {
+            "user_id": user_id,
+            "type": activity_type,
+            "title": title,
+            "description": description,
+            "timestamp": datetime.datetime.utcnow(),
+            "metadata": {}
+        }
+        
+        # Add optional fields
+        if 'repo_id' in kwargs:
+            activity_doc['repo_id'] = kwargs['repo_id']
+        if 'repo_name' in kwargs:
+            activity_doc['repo_name'] = kwargs['repo_name']
+        if 'file_name' in kwargs:
+            activity_doc['file_name'] = kwargs['file_name']
+        if 'language' in kwargs:
+            activity_doc['language'] = kwargs['language']
+        if 'metadata' in kwargs:
+            activity_doc['metadata'] = kwargs['metadata']
+        
+        db["codex_activities"].insert_one(activity_doc)
+        logger.info(f"✅ Activity logged: {activity_type} for user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to log activity: {e}")
+
+

@@ -12,3 +12,4 @@ def to_java_class_name(filename):
     parts = [p.capitalize() for p in parts if p]
 
     return "".join(parts)
+
