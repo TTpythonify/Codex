@@ -220,7 +220,6 @@ def run_code():
 
     try:
         # Use your Render Piston endpoint
-        PISTON_URL = "https://piston-render.onrender.com/execute"
         response = requests.post(PISTON_URL, json=execution_data, timeout=15)
         response.raise_for_status()
         result = response.json()

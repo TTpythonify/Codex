@@ -349,11 +349,33 @@ body {
     box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
 }
 
-/* FIXED: Repository responsive grid layout */
+/* UPDATED: Repository vertical scroll layout */
 .repos-scroll-container {
-    overflow: visible;
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
     margin: 0;
-    padding: 0;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #0d1117;
+}
+
+.repos-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.repos-scroll-container::-webkit-scrollbar-track {
+    background: #0d1117;
+    border-radius: 3px;
+}
+
+.repos-scroll-container::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+.repos-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
 }
 
 .repos-grid {
@@ -469,7 +491,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 400px;
+    max-height: 210px;
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 8px;
