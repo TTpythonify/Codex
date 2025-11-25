@@ -174,21 +174,19 @@ def repo_page(repo_id):
 
 @repo_routes.route("/run_code", methods=["POST"])
 def run_code():
-    # Get code and language from frontend
     data = request.get_json()
     code = data.get("code", "")
     language = data.get("language", "text")
     file_id = data.get("file_id")
-    
+
     if not code.strip():
         return jsonify({"error": "No code provided"}), 400
 
-    # Basic validation
-    if len(code) > 50000:  
+    if len(code) > 50000:
         return jsonify({"error": "Code too long (max 50KB)"}), 400
-    # Ignore text files
+
     if language == "text":
-        return #jsonify({"output": "", "success": True, "compile_stdout": "", "compile_stderr": ""})
+        return
 
     # Map frontend language to Piston language identifiers
     language_map = {
@@ -198,68 +196,47 @@ def run_code():
         'cpp': 'cpp',
         'c': 'c'
     }
-    
-    # Map languages to their file extensions
-    file_extension_map = {
-        'python': 'py',
-        'javascript': 'js',
-        'java': 'java',
-        'cpp': 'cpp',
-        'c': 'c'
-    }
-    
     piston_language = language_map.get(language, 'python')
-    file_extension = file_extension_map.get(language, 'py')
-    
-    # Determine the filename based on language
+
+    # Determine filename for Java or default
     if language == 'java':
         import re
         class_match = re.search(r'public\s+class\s+(\w+)', code)
         filename = f"{class_match.group(1)}.java" if class_match else "Main.java"
     else:
-        filename = f"main.{file_extension}"
+        file_extension_map = {
+            'python': 'py',
+            'javascript': 'js',
+            'java': 'java',
+            'cpp': 'cpp',
+            'c': 'c'
+        }
+        filename = f"main.{file_extension_map.get(language, 'txt')}"
 
     execution_data = {
         "language": piston_language,
-        "version": "*",
-        "files": [{"name": filename, "content": code}],
-        "stdin": "",
-        "args": [],
-        "compile_timeout": 10000,
-        "run_timeout": 3000,
-        "compile_memory_limit": -1,
-        "run_memory_limit": -1
+        "code": code
     }
 
     try:
-        # Execute code via Piston
-        response = requests.post(f"{PISTON_URL}/api/v2/execute", json=execution_data, timeout=15)
+        # Use your Render Piston endpoint
+        PISTON_URL = "https://piston-render.onrender.com/execute"
+        response = requests.post(PISTON_URL, json=execution_data, timeout=15)
         response.raise_for_status()
         result = response.json()
 
-        # Get compile/run results
-        compile_result = result.get("compile", {})
-        run_result = result.get("run", {})
-        
-        compile_stdout = compile_result.get("stdout", "")
-        compile_stderr = compile_result.get("stderr", "")
-        compile_code = compile_result.get("code", 0)
-        
-        stdout = run_result.get("stdout", "")
-        stderr = run_result.get("stderr", "")
-        exit_code = run_result.get("code", 0)
+        # Extract stdout and stderr
+        stdout = result.get("stdout", "")
+        stderr = result.get("stderr", "")
+        exit_code = 0 if not stderr else 1
 
         # Determine output and success
-        if compile_code != 0 and compile_stderr:
-            output = f"Compilation Error:\n{compile_stderr}"
+        if exit_code != 0:
+            output = f"Error:\n{stderr}"
             success = False
         else:
-            output = stdout if stdout else (stderr if stderr else "No output")
-            if exit_code != 0:
-                output = f"Runtime Error (exit code {exit_code}):\n{output}"
-                success = False
-            else:
-                success = True
+            output = stdout if stdout else "No output"
+            success = True
 
         # ✅ Update file in DB and log activity
         if success and file_id:
@@ -269,34 +246,24 @@ def run_code():
                     if user_resp.ok:
                         github_username = user_resp.json()["login"]
                         user_doc = user_collection.find_one({"username": github_username})
-                        
+
                         if user_doc:
                             file_obj_id = ObjectId(file_id)
-                            
-                            # Get file details for logging
                             file_doc = files_collection.find_one({"_id": file_obj_id})
-                            repo_doc = repositories_collection.find_one({"_id": file_doc["repo_id"]}) if file_doc else None
-                            
-                            # Update the file
+                            repo_doc = repositories_collection.find_one(
+                                {"_id": file_doc["repo_id"]}) if file_doc else None
+
                             update_result = files_collection.update_one(
-                                {
-                                    "_id": file_obj_id,
-                                    "user_id": user_doc["_id"],
-                                    "type": "file"
-                                },
-                                {
-                                    "$set": {
-                                        "content": code,
-                                        "last_success_at": datetime.datetime.utcnow(),
-                                        "updated_at": datetime.datetime.utcnow()
-                                    }
-                                }
+                                {"_id": file_obj_id, "user_id": user_doc["_id"], "type": "file"},
+                                {"$set": {
+                                    "content": code,
+                                    "last_success_at": datetime.datetime.utcnow(),
+                                    "updated_at": datetime.datetime.utcnow()
+                                }}
                             )
-                            
+
                             if update_result.modified_count > 0:
                                 logger.info(f"✅ File {file_id} saved after successful execution")
-                                
-                                # Log activity
                                 if file_doc and repo_doc:
                                     log_activity(
                                         user_doc["_id"],
@@ -314,28 +281,27 @@ def run_code():
             except Exception as e:
                 logger.error(f"❌ Error saving file after execution: {e}")
 
-        # Response to frontend
-        response_data = {
+        return jsonify({
             "output": output,
             "success": success,
-            "compile_stdout": compile_stdout,
-            "compile_stderr": compile_stderr
-        }
-        return jsonify(response_data)
+            "compile_stdout": "",  # not used in Render Piston
+            "compile_stderr": ""   # not used in Render Piston
+        })
 
     except requests.exceptions.Timeout:
         logger.error("Piston execution timeout")
         return jsonify({"error": "Execution timeout (max 15 seconds)"}), 408
-        
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Error communicating with Piston: {e}")
         return jsonify({"error": f"Could not execute code: {str(e)}"}), 500
-        
+
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
 
 
 
@@ -537,11 +503,26 @@ def create_file():
         // Write your code here
     }}
 }}"""
-        elif language in ("c", "cpp"):
-            content = """int main() {
+        elif language == "c":
+            content = """#include <stdio.h>
+
+int main() {
+    // Code goes here
+    return 0;
+}"""
+
+        elif language == "cpp":
+            content = """#include <iostream>
+
+int main() {
     // code goes here
     return 0;
 }"""
+
+
+
+
+#include <stdio.h>
 
         # 11. Insert into DB
         file_doc = {
