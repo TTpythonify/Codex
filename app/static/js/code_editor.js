@@ -43,7 +43,7 @@ function initTerminal() {
             brightCyan: '#b3f6ff',
             brightWhite: '#f0f6fc'
         },
-        rows: 10,
+        rows: 15,
         scrollback: 1000
     });
 
