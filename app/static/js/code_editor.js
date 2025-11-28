@@ -60,9 +60,11 @@ require(['vs/editor/editor.main'], function () {
     // Create the editor
     editorInstance = monaco.editor.create(document.getElementById('editor'), {
         value: `// Welcome to CODEX!
-// Select a file from the explorer to start coding,
-// or create a new file using the buttons above.
+// Use the explorer to open an existing file,
+// or click "New File" / "New Folder" to create one.
+// Only .py, .js, .java, .c, .cpp files are supported.
 // Happy coding!`,
+
 
         language: 'javascript',
         theme: 'vs-dark',
@@ -109,12 +111,73 @@ require(['vs/editor/editor.main'], function () {
         setTimeout(() => editorInstance.layout(), 100);
     });
 
+    // Initialize terminal resizer
+    initializeTerminalResizer();
+
     // Load initial file tree
     const repoId = document.getElementById('repoId').value;
     if (repoId) {
         loadFileTree(repoId);
     }
 });
+
+// ============================================================================
+// TERMINAL RESIZER
+// ============================================================================
+
+function initializeTerminalResizer() {
+    const terminalPanel = document.querySelector('.terminal-panel');
+    const terminalResizer = document.querySelector('.terminal-resizer');
+    
+    if (!terminalPanel || !terminalResizer) {
+        console.error('Terminal elements not found');
+        return;
+    }
+
+    let isResizing = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    terminalResizer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isResizing = true;
+        startY = e.clientY;
+        startHeight = terminalPanel.offsetHeight;
+        
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        
+        e.preventDefault();
+        
+        const deltaY = startY - e.clientY;
+        const newHeight = startHeight + deltaY;
+        
+        // Min height 100px, max height 80% of container
+        const containerHeight = document.querySelector('.editor-container').offsetHeight;
+        const minHeight = 100;
+        const maxHeight = containerHeight * 0.8;
+        
+        const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+        
+        terminalPanel.style.height = clampedHeight + 'px';
+        
+        if (editorInstance) {
+            editorInstance.layout();
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    });
+}
 
 // ============================================================================
 // TAB MANAGEMENT SYSTEM
@@ -405,11 +468,10 @@ function createInlineInput(type, parentId) {
 }
 
 
-
 async function createFileVSCode(fileName, parentId) {
     const repoId = document.getElementById('repoId').value;
 
-    // Determine language from extension
+    // Determine file extension
     const ext = fileName.split('.').pop().toLowerCase();
 
     // Allowed executable languages
@@ -425,10 +487,10 @@ async function createFileVSCode(fileName, parentId) {
         'txt': 'text'
     };
 
-    // If the extension is not executable, set language to text
+    // Determine language
     const language = execLanguages.includes(ext) ? languageMap[ext] : 'text';
 
-    // Notify user if they are trying to create an unsupported executable file
+    // Terminal warning for unsupported executable files
     if (!execLanguages.includes(ext) && ext !== 'txt') {
         terminal.writeln(`\x1b[1;33m⚠ ${fileName} cannot be executed. Only Python, JavaScript, C, C++, and Java files can be run.\x1b[0m`);
     }
@@ -450,16 +512,23 @@ async function createFileVSCode(fileName, parentId) {
 
         const data = await response.json();
 
-        if (response.ok) {
-            await loadFileTree(repoId);
-        } else {
-            alert(`Error: ${data.error || 'Failed to create file'}`);
+        if (!response.ok) {
+            // Show backend error as alert and in terminal
+            alert(data.error || 'Failed to create file');
+            terminal.writeln(`\x1b[1;31mError: ${data.error || 'Failed to create file'}\x1b[0m`);
+            return; // Stop further execution
         }
+
+        // Success: reload file tree
+        await loadFileTree(repoId);
+
     } catch (error) {
         console.error('Error creating file:', error);
         alert('Failed to create file. Please try again.');
+        terminal.writeln(`\x1b[1;31mFailed to create file. Please try again.\x1b[0m`);
     }
 }
+
 
 
 async function createFolderVSCode(folderName, parentId) {
@@ -681,6 +750,11 @@ function runCode() {
         'c': 'C'
     };
 
+    // Clear terminal before each execution
+    terminal.clear();
+    terminal.writeln('\x1b[1;36mCODEX Terminal\x1b[0m');
+    terminal.writeln('');
+    
     terminal.writeln(`\x1b[1;36m▶ Running ${languageNames[currentLanguage] || 'code'}...\x1b[0m`);
     terminal.writeln('─'.repeat(50));
 

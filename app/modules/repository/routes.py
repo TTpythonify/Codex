@@ -172,9 +172,6 @@ def repo_page(repo_id):
         return redirect(url_for("main.home"))
 
 
-
-
-
 @repo_routes.route("/run_code", methods=["POST"])
 def run_code():
     data = request.get_json()
@@ -427,7 +424,8 @@ def create_file():
         file_name = data.get("file_name")
         language = data.get("language", "text")
         content = data.get("content", "")
-        parent_id = data.get("parent_id")  # None for root
+        parent_id = data.get("parent_id")
+        warning_msg = None
 
         # 2. Validate fields
         if not repo_id or not file_name or not file_name.strip():
@@ -502,7 +500,7 @@ def create_file():
         if language == "java":
             content = f"""public class {class_name} {{
     public static void main(String[] args) {{
-        // Write your code here
+        // NOTE: Java programs typically take 10–15 seconds to run due to setup complexity
     }}
 }}"""
         elif language == "c":

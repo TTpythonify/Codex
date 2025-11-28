@@ -141,11 +141,10 @@ def public_repositories():
         return redirect(url_for("main.login_page"))
 
 
-
 @main_routes.route("/activity_feed")
 def activity_feed():
 
-    logger.info("Accessing home page...")
+    logger.info("Accessing activity feed page...")
     if not github.authorized:
         return redirect(url_for("main.login_page"))
 
@@ -173,8 +172,26 @@ def activity_feed():
                 }}
             )
             user_doc = user_collection.find_one({"github_id": github_id})
+        else:
+            # Create new user if doesn't exist
+            insert_result = user_collection.insert_one({
+                "github_id": github_id,
+                "username": github_username,
+                "html_url": user_data['html_url'],
+                "avatar_url": user_data['avatar_url'],
+                "created_at": datetime.datetime.utcnow(),
+                "updated_at": datetime.datetime.utcnow()
+            })
+            user_doc = user_collection.find_one({"_id": insert_result.inserted_id})
 
-        return render_template("activity_feed.html", user=user_doc)   
+        return render_template("activity_feed.html", user=user_doc)    
+
+    except Exception as e:
+        logger.error(f"Error fetching or saving user data: {e}")
+        return redirect(url_for("main.login_page"))
+    
+
+    
     
 
     except Exception as e:

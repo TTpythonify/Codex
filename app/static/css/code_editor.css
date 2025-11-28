@@ -395,10 +395,24 @@ body {
     border-top: 1px solid #30363d;
     display: none;
     flex-direction: column;
-    resize: vertical;
     overflow: hidden;
+    position: relative;
 }
 
+.terminal-resizer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: ns-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+.terminal-resizer:hover {
+    background: #58a6ff;
+}
 .terminal-header {
     background: rgba(22, 27, 34, 0.95);
     border-bottom: 1px solid #30363d;

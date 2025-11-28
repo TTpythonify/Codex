@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Codex - Activities</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/home_page.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/activity_feed.css') }}">
 </head>
 <body>
     <nav class="navbar">
@@ -45,55 +46,79 @@
     </nav>
 
     <div class="main-container">
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h3>Others</h3>
-        </div>
-        <div class="project-list" id="projectList">
-            <div class="project-item active" data-project-id="1" role="button" tabindex="0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                </svg>
-                <span>My Project</span>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Features</h3>
             </div>
-            <div class="project-item" data-project-id="2" role="button" tabindex="0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                </svg>
-                <span>Public Repositories</span>
+            <div class="project-list" id="projectList">
+                <a href="{{ url_for('main.home') }}" class="project-item" data-project-id="1" role="button" tabindex="0">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                    </svg>
+                    <span>My Project</span>
+                </a>
+                <a href="{{ url_for('main.public_repositories') }}" class="project-item" data-project-id="2" role="button" tabindex="0">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                    </svg>
+                    <span>Public Repositories</span>
+                </a>
+                <a href="{{ url_for('main.activity_feed') }}" class="project-item active" data-project-id="3" role="button" tabindex="0">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                    </svg>
+                    <span>Activity Feeds</span>
+                </a>
             </div>
-            <div class="project-item" data-project-id="3" role="button" tabindex="0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                </svg>
-                <span>Activity Feeds</span>
-            </div>
-        </div>
-    </aside>
-
+        </aside>
 
         <main class="content">
             <section class="welcome-section">
                 <div class="welcome-content">
-                    <h1>Your Activity</h1>
-                    <p>Track your recent contributions, repositories, and interactions.</p>
+                    <h1>Your Activity Timeline</h1>
+                    <p>Track your recent contributions, code executions, and repository changes.</p>
                 </div>
             </section>
 
-            <section class="repos-section">
-                <div class="section-header">
-                    <h2>Repositories</h2>
+            <section class="activity-feed-section">
+                <div class="activity-filters">
+                    <button class="filter-btn active" data-filter="all">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 4a4 4 0 100 8 4 4 0 000-8z"/>
+                        </svg>
+                        All Activity
+                    </button>
+                    <button class="filter-btn" data-filter="create_repo">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
+                        </svg>
+                        Repositories
+                    </button>
+                    <button class="filter-btn" data-filter="create_file">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25V1.75z"/>
+                        </svg>
+                        Files
+                    </button>
+                    <button class="filter-btn" data-filter="run_code">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 4a4 4 0 100 8 4 4 0 000-8zM6 8l3-2v4L6 8z"/>
+                        </svg>
+                        Executions
+                    </button>
                 </div>
-                <div class="coming-soon">
-                    <p>New features coming soon 🚀</p>
+
+                <div class="timeline-container" id="activityTimeline">
+                    <!-- Loading state -->
+                    <div class="timeline-loading">
+                        <div class="spinner"></div>
+                        <p>Loading your activity...</p>
+                    </div>
                 </div>
             </section>
-            
         </main>
     </div>
 
-    
-
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/activity_feed.js') }}"></script>
 </body>
 </html>
