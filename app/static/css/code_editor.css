@@ -922,3 +922,23 @@ body {
     min-height: 100%;
     cursor: default;
 }
+
+
+
+.commit-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.commit-btn:hover {
+    background-color: #0066d6;
+}

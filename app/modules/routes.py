@@ -21,7 +21,7 @@ def login_page():
             if resp.ok:
                 return redirect(url_for("main.home"))
         except Exception as e:
-            logger.error(f"Error checking GitHub authorization: {e}")
+            logger.error(f"Error checking GitHub authoriz`ation: {e}")
     return render_template("login_page.html")
 
 
@@ -104,8 +104,6 @@ def home():
 
 @main_routes.route("/public_repositories")
 def public_repositories():
-
-    logger.info("Accessing home page...")
     if not github.authorized:
         return redirect(url_for("main.login_page"))
 
@@ -133,12 +131,38 @@ def public_repositories():
                 }}
             )
             user_doc = user_collection.find_one({"github_id": github_id})
+        else:
+            insert_result = user_collection.insert_one({
+                "github_id": github_id,
+                "username": github_username,
+                "html_url": user_data['html_url'],
+                "avatar_url": user_data['avatar_url'],
+                "created_at": datetime.datetime.utcnow(),
+                "updated_at": datetime.datetime.utcnow()
+            })
+            user_doc = user_collection.find({"_id": insert_result.inserted_id})
 
-        return render_template("public_repositories.html", user=user_doc)    
+        # Fetch all public repositoriesr
+        repos_cursor = repositories_collection.find({"private": False})
+        repos = []
+
+        for repo in repos_cursor:
+            # Convert ObjectId and datetime for safe display in template
+            repo["_id"] = str(repo["_id"])
+            if isinstance(repo.get("created_at"), datetime.datetime):
+                repo["created_at"] = repo["created_at"].strftime("%Y-%m-%d")
+            if isinstance(repo.get("updated_at"), datetime.datetime):
+                repo["updated_at"] = repo["updated_at"].strftime("%Y-%m-%d")
+            repos.append(repo)
+
+        print(f"REPO\n{repos},{len(repos)}")
+        return render_template("public_repositories.html", user=user_doc, repos=repos)    
 
     except Exception as e:
         logger.error(f"Error fetching or saving user data: {e}")
         return redirect(url_for("main.login_page"))
+
+
 
 
 @main_routes.route("/activity_feed")
@@ -190,10 +214,6 @@ def activity_feed():
         logger.error(f"Error fetching or saving user data: {e}")
         return redirect(url_for("main.login_page"))
     
-
-    
-    
-
     except Exception as e:
         logger.error(f"Error fetching or saving user data: {e}")
         return redirect(url_for("main.login_page"))

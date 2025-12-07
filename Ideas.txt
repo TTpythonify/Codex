@@ -1,0 +1,5 @@
+Add notification to the homepage, so users can see who joins their rooms.
+Rooms has collab section to see whose there. only the owner of the room can remove people. 
+Public repo. people can click on it and then request to join
+Delete/rename of files.
+

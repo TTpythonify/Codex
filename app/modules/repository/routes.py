@@ -643,7 +643,6 @@ def get_files(repo_id):
 
 
 
-# Add these routes to your app/modules/repository/routes.py
 
 @repo_routes.route("/get_activities", methods=["GET"])
 def get_activities():
