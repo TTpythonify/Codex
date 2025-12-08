@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Codex - Repositories</title>
+    <title>Codex - Public Repositories</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/public_repositories.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/home_page.css') }}">
 </head>
 <body>
@@ -45,57 +46,203 @@
     </nav>
 
     <div class="main-container">
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h3>Others</h3>
-        </div>
-        <div class="project-list" id="projectList">
-            <div class="project-item active" data-project-id="1" role="button" tabindex="0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                </svg>
-                <span>My Project</span>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Navigation</h3>
             </div>
-            <div class="project-item" data-project-id="2" role="button" tabindex="0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                </svg>
-                <span>Public Repositories</span>
+            <div class="project-list" id="projectList">
+                <div class="project-item" data-project-id="1" role="button" tabindex="0">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                    </svg>
+                    <span>My Project</span>
+                </div>
+                <div class="project-item active" data-project-id="2" role="button" tabindex="0">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                    </svg>
+                    <span>Public Repositories</span>
+                </div>
+                <div class="project-item" data-project-id="3" role="button" tabindex="0">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
+                    </svg>
+                    <span>Activity Feeds</span>
+                </div>
             </div>
-            <div class="project-item" data-project-id="3" role="button" tabindex="0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25V2.75A1.75 1.75 0 0014.25 1H1.75zM1.5 2.75a.25.25 0 01.25-.25h12.5a.25.25 0 01.25.25v10.5a.25.25 0 01-.25.25H1.75a.25.25 0 01-.25-.25V2.75z"/>
-                </svg>
-                <span>Activity Feeds</span>
-            </div>
-        </div>
-    </aside>
-
+        </aside>
 
         <main class="content">
             <section class="welcome-section">
                 <div class="welcome-content">
-                    <h1>Ready to collab <span class="highlight">{{ user.username }}</span>!</h1>
-                    <p>Explore and contribute to other people’s repositories!</p>
+                    <h1>Explore & Collaborate, <span class="highlight">{{ user.username }}</span>! 🚀</h1>
+                    <p>Discover amazing projects and join the community!</p>
                 </div>
-
             </section>
 
             <section class="repos-section">
                 <div class="section-header">
-                    <h2>Repositories</h2>
+                    <h2>Public Repositories ({{ repos|length }})</h2>
+                    <div class="search-container">
+                        <input type="text" id="searchRepos" placeholder="Search repositories...">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M10.68 11.74a6 6 0 01-7.922-8.982 6 6 0 018.982 7.922l3.04 3.04a.749.749 0 01-.326 1.275.749.749 0 01-.734-.215l-3.04-3.04zm-6.43-7.49a4.5 4.5 0 106.36 6.36 4.5 4.5 0 00-6.36-6.36z"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="coming-soon">
-                    <p>New features coming soon 🚀</p>
+                <div class="repos-scroll-container">
+                    <div class="repos-grid" id="publicReposGrid">
+                        {% if repos %}
+                            {% for repo in repos %}
+                            <div class="public-repo-card" data-repo-id="{{ repo._id }}">
+                                <div class="repo-header">
+                                    <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
+                                    </svg>
+                                    <h3 class="repo-name">{{ repo.name }}</h3>
+                                </div>
+                                <p class="repo-description">{{ repo.description or 'No description provided' }}</p>
+                                <div class="repo-footer">
+                                    <div class="repo-stats">
+                                        <span class="stat">
+                                            🔓 Public
+                                        </span>
+                                        <span class="stat">
+                                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                                <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0z"/>
+                                                <path d="M8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+                                            </svg>
+                                            View Details
+                                        </span>
+                                    </div>
+                                    <span class="repo-time">{{ repo.created_at }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-repos-message">
+                                <svg width="64" height="64" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
+                                </svg>
+                                <h3>No Public Repositories Yet</h3>
+                                <p>Be the first to create a public repository!</p>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </section>
-
-            
         </main>
     </div>
 
-    
+    <!-- Repository Details Modal - UPDATED CLASS NAMES -->
+    <div class="repo-modal" id="repoDetailsModal">
+        <div class="repo-modal-content repo-details-modal">
+            <div class="repo-modal-header">
+                <div class="header-content">
+                    <svg class="repo-icon-large" width="24" height="24" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
+                    </svg>
+                    <div>
+                        <h2 id="modalRepoName">Repository Name</h2>
+                        <p id="modalRepoOwner" class="repo-owner">Owner</p>
+                    </div>
+                </div>
+                <button class="repo-modal-close" id="closeRepoModal">&times;</button>
+            </div>
+            
+            <div class="repo-modal-body">
+                <div class="repo-info-container">
+                    <div class="repo-detail-section">
+                        <h3>
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0114.25 13H8.06l-2.573 2.573A1.458 1.458 0 013 14.543V13H1.75A1.75 1.75 0 010 11.25v-9.5zM1.75 1.5a.25.25 0 00-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 01.75.75v2.19l2.72-2.72a.75.75 0 01.53-.22h6.5a.25.25 0 00.25-.25v-9.5a.25.25 0 00-.25-.25H1.75z"/>
+                            </svg>
+                            Description
+                        </h3>
+                        <p id="modalRepoDescription" class="description-text">Repository description goes here</p>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div class="repo-detail-section">
+                        <h3>
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M1.5 1.75V13.5h13.75a.75.75 0 010 1.5H.75a.75.75 0 01-.75-.75V1.75a.75.75 0 011.5 0zm14.28 2.53l-5.25 5.25a.75.75 0 01-1.06 0L7 7.06 4.28 9.78a.75.75 0 01-1.06-1.06l3.25-3.25a.75.75 0 011.06 0L10 7.94l4.72-4.72a.75.75 0 111.06 1.06z"/>
+                            </svg>
+                            Repository Stats
+                        </h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0z"/>
+                                </svg>
+                                <div>
+                                    <span class="info-label">Visibility</span>
+                                    <span class="info-value" id="modalRepoVisibility">Public</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0zM8 0a8 8 0 100 16A8 8 0 008 0zm.5 4.75a.75.75 0 00-1.5 0v3.5a.75.75 0 00.471.696l2.5 1a.75.75 0 00.557-1.392L8.5 7.742V4.75z"/>
+                                </svg>
+                                <div>
+                                    <span class="info-label">Created</span>
+                                    <span class="info-value" id="modalRepoCreated">Date</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M10.5 5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm.061 3.073a4 4 0 10-5.123 0 6.004 6.004 0 00-3.431 5.142.75.75 0 001.498.07 4.5 4.5 0 018.99 0 .75.75 0 101.498-.07 6.005 6.005 0 00-3.432-5.142z"/>
+                                </svg>
+                                <div>
+                                    <span class="info-label">Members</span>
+                                    <span class="info-value" id="modalRepoMembers">0</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25V1.75z"/>
+                                </svg>
+                                <div>
+                                    <span class="info-label">Files</span>
+                                    <span class="info-value" id="modalRepoFiles">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div class="repo-detail-section">
+                        <h3>
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M5.5 3.5a2 2 0 100 4 2 2 0 000-4zM2 5.5a3.5 3.5 0 115.898 2.549 5.507 5.507 0 013.034 4.084.75.75 0 11-1.482.235 4.001 4.001 0 00-7.9 0 .75.75 0 01-1.482-.236A5.507 5.507 0 013.102 8.05 3.49 3.49 0 012 5.5zM11 4a.75.75 0 100 1.5 1.5 1.5 0 01.666 2.844.75.75 0 00-.416.672v.352a.75.75 0 00.574.73c1.2.289 2.162 1.2 2.522 2.372a.75.75 0 101.474-.28 5.06 5.06 0 00-2.88-3.54A3.002 3.002 0 0011 4z"/>
+                            </svg>
+                            Team Members
+                        </h3>
+                        <div class="members-list" id="modalMembersList">
+                            <div class="member-loading">
+                                <div class="spinner-small"></div>
+                                <span>Loading members...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="repo-modal-actions">
+                <button type="button" class="btn-secondary" id="cancelRepoBtn">Cancel</button>
+                <button type="button" class="btn-join" id="joinRepoBtn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M7.75 0a.75.75 0 01.75.75V7h6.25a.75.75 0 010 1.5H8.5v6.25a.75.75 0 01-1.5 0V8.5H.75a.75.75 0 010-1.5H7V.75A.75.75 0 017.75 0z"/>
+                    </svg>
+                    Join Repository
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/public_repositories.js') }}"></script>
 </body>
 </html>

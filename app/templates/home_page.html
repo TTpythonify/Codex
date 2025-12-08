@@ -82,7 +82,7 @@
 
             <section class="repos-section">
                 <div class="section-header">
-                    <h2>Your Repositories</h2>
+                    <h2>Your Repositories ({{ repos|length }})</h2>
                     <button class="create-repo-btn" id="createRepoBtn">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M7.75 0a.75.75 0 01.75.75V7h6.25a.75.75 0 010 1.5H8.5v6.25a.75.75 0 01-1.5 0V8.5H.75a.75.75 0 010-1.5H7V.75A.75.75 0 017.75 0z"/>
@@ -94,46 +94,35 @@
                     <div class="repos-grid" id="reposGrid">
                         {% if repos %}
                             {% for repo in repos %}
-                            <div class="repo-card" data-repo-id="{{ repo._id }}">
+                            <div class="repo-card" 
+                                data-repo-id="{{ repo._id }}" 
+                                data-is-owner="{{ 'true' if repo.is_owner else 'false' }}"
+                                data-members='{{ repo.members | tojson }}'>
                                 <div class="repo-header">
-                                    <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                                        <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-                                    </svg>
                                     <h3 class="repo-name">{{ repo.name }}</h3>
+                                    {% if repo.is_owner %}
+                                        <span class="badge owner-badge">Owner</span>
+                                    {% else %}
+                                        <span class="badge member-badge">Member</span>
+                                    {% endif %}
                                 </div>
                                 <p class="repo-description">{{ repo.description or 'No description provided' }}</p>
                                 <div class="repo-footer">
-                                    <div class="repo-stats">
-                                        <span class="stat">
-                                            {% if repo.private %}
-                                            🔒 Private
-                                            {% else %}
-                                            🔓 Public
-                                            {% endif %}
-                                        </span>
-                                    </div>
-                                    <span class="repo-time">{{ repo.created_at }}</span>
+                                    <span>{{ 'Private' if repo.private else 'Public' }}</span>
+                                    <span>{{ repo.created_at }}</span>
                                 </div>
                             </div>
                             {% endfor %}
                         {% else %}
                             <div class="repo-card" data-repo-id="0">
                                 <div class="repo-header">
-                                    <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                                        <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-                                    </svg>
                                     <h3 class="repo-name">No Repositories Yet</h3>
                                 </div>
                                 <p class="repo-description">Create your first repository to get started!</p>
-                                <div class="repo-footer">
-                                    <div class="repo-stats">
-                                        <span class="stat">Click "New Repository" above</span>
-                                    </div>
-                                    <span class="repo-time">Just now</span>
-                                </div>
                             </div>
                         {% endif %}
                     </div>
+
 
                 </div>
             </section>
@@ -195,6 +184,10 @@
 
         </div>
     </div>
+
+    <script>
+    const currentUsername = "{{ user.username }}";
+</script>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>

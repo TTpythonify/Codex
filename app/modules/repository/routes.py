@@ -30,10 +30,6 @@ def serialize_doc(doc):
             doc_copy[k] = v
     return doc_copy
 
-
-# -----------------------------
-# Create a new repository
-# -----------------------------
 @repo_routes.route("/create_repo", methods=["POST"])
 def create_repo():
 
@@ -59,6 +55,9 @@ def create_repo():
             raise Exception("Failed to fetch GitHub user details")
         user_data = user_resp.json()
         github_username = user_data["login"]
+        github_user_id = user_data["id"]
+
+        print(f"\n\n{user_data}\n")
 
         # Find user in DB
         user_doc = user_collection.find_one({"username": github_username})
@@ -83,17 +82,21 @@ def create_repo():
 
         # Save repo in DB
         repo_data = response.json()
+        print(f"\n\n{github_user_id}\n")
         repo_doc = {
-            "user_id": user_doc["_id"],
-            "github_id": repo_data["id"],
+            "user_id": user_doc["_id"],           # MongoDB _id of owner
+            "owner_github_id": github_user_id,    # GitHub ID of the user (owner)
+            "repo_github_id": repo_data["id"],    # GitHub ID of the repo
             "name": repo_data["name"],
             "full_name": repo_data["full_name"],
             "html_url": repo_data["html_url"],
             "description": repo_data.get("description"),
             "private": repo_data["private"],
             "created_at": datetime.datetime.strptime(repo_data["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
-            "updated_at": datetime.datetime.utcnow()
+            "updated_at": datetime.datetime.utcnow(),
+            "members": []
         }
+
         insert_result = repositories_collection.insert_one(repo_doc)
 
         # Fetch the saved document and serialize ObjectIds
@@ -118,6 +121,7 @@ def create_repo():
     except Exception as e:
         logger.error(f"Error creating repository: {e}")
         return jsonify({"message": "Error creating repository", "error": str(e)}), 500
+
 
 
 # -----------------------------

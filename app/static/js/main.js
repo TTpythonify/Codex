@@ -97,56 +97,85 @@ document.addEventListener('DOMContentLoaded', () => {
 function addRepoToGrid(repo) {
     const reposGrid = document.getElementById('reposGrid');
     
-    // Remove "No Repositories Yet" card if it exists
+    // Remove "No Repositories Yet" card if exists
     const noReposCard = reposGrid.querySelector('[data-repo-id="0"]');
-    if (noReposCard) {
-        noReposCard.remove();
-    }
+    if (noReposCard) noReposCard.remove();
 
     // Create new repo card
     const repoCard = document.createElement('div');
     repoCard.className = 'repo-card';
     repoCard.setAttribute('data-repo-id', repo._id);
+    repoCard.setAttribute('data-is-owner', repo.is_owner ? 'true' : 'false');
+    repoCard.setAttribute('data-members', JSON.stringify(repo.members || []));
     repoCard.style.cursor = 'pointer';
-    
+
     repoCard.innerHTML = `
         <div class="repo-header">
             <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
             </svg>
             <h3 class="repo-name">${repo.name}</h3>
+            ${repo.is_owner ? '<span class="badge owner-badge">Owner</span>' : '<span class="badge member-badge">Member</span>'}
         </div>
         <p class="repo-description">${repo.description || 'No description provided'}</p>
         <div class="repo-footer">
             <div class="repo-stats">
-                <span class="stat">
-                    ${repo.private ? '🔒 Private' : '🔓 Public'}
-                </span>
+                <span class="stat">${repo.private ? '🔒 Private' : '🔓 Public'}</span>
             </div>
             <span class="repo-time">${repo.created_at}</span>
         </div>
     `;
-    
+
+    // Add click handler respecting owner/member
     repoCard.addEventListener('click', () => {
+        const isOwner = repoCard.getAttribute('data-is-owner') === 'true';
+        const members = JSON.parse(repoCard.getAttribute('data-members') || '[]');
+        const currentUsername = "{{ user.username }}"; // passed from Jinja
+
+        if (!isOwner && !members.includes(currentUsername)) {
+            alert("You do not have access to this repository.");
+            return;
+        }
+
+        if (repo.private && !isOwner) {
+            alert("You are a member of this private repository. Some actions may be restricted.");
+        }
+
         window.location.href = `/repo/${repo._id}`;
     });
-    
+
     reposGrid.appendChild(repoCard);
 }
+
 
 function addRepoClickHandlers() {
     const repoCards = document.querySelectorAll('.repo-card');
     repoCards.forEach(card => {
         const repoId = card.getAttribute('data-repo-id');
-        
+        const isOwner = card.getAttribute('data-is-owner') === 'true';
+        const members = JSON.parse(card.getAttribute('data-members') || '[]');
+        const currentUsername = "{{ user.username }}";
+
         if (repoId && repoId !== '0') {
             card.style.cursor = 'pointer';
             card.addEventListener('click', () => {
+                if (!isOwner && !members.includes(currentUsername)) {
+                    alert("You do not have access to this repository.");
+                    return;
+                }
+
+                const isPrivate = card.querySelector('.repo-footer .stat')?.textContent.includes('Private');
+                if (isPrivate && !isOwner) {
+                    alert("You are a member of this private repository. Some actions may be restricted.");
+                }
+
                 window.location.href = `/repo/${repoId}`;
             });
         }
     });
 }
+
+
 
 
 // Add click handlers for sidebar project items
