@@ -287,7 +287,7 @@ def join_repository(repo_id):
         
         user_data = resp.json()
         github_id = user_data['id']
-
+        
         # Find user in DB
         user_doc = user_collection.find_one({"github_id": github_id})
         if not user_doc:
@@ -297,7 +297,9 @@ def join_repository(repo_id):
         repo = repositories_collection.find_one({"_id": ObjectId(repo_id)})
         if not repo:
             return jsonify({"error": "Repository not found"}), 404
-
+        
+        repo_owner_id = repo.get("user_id")  
+        repo_name = repo.get("name")
         # Check if already a member
         existing = repositories_collection.find_one({
             "_id": ObjectId(repo_id),
@@ -318,19 +320,25 @@ def join_repository(repo_id):
             f"Joined repository '{repo['name']}'",
             f"{user_doc['username']} joined the repository {repo['name']}",
             repo_id=repo["_id"],
-            repo_name=repo["name"]
+            repo_name=repo_name
         )
 
+        notification_details = {
+            "user_id": repo_owner_id,  # the owner of the repository
+            "type": "member_joined",
+            "message": f"{user_doc['username']} joined your repository {repo_name}.",
+            "repo_id": repo_id,
+            "created_at": datetime.datetime.utcnow(),
+            "read": False
+        }
 
-        # For now, just create a notification 
+        notifications_collection.insert_one(notification_details)
+
         # You can store join requests in a separate collection #
         # join_requests_collection.insert_one({ # "repo_id": ObjectId(repo_id), # 
         # "user_id": user_doc["_id"], # "status": "pending", 
         # "created_at": datetime.datetime.utcnow() # })
 
-        print(
-            f"User {user_doc['username']} joined repository {repo['name']}"
-        )
 
         return jsonify({
             "message": "Joined repository successfully",

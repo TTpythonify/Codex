@@ -29,6 +29,7 @@ try:
     user_collection = db["codex_users"]
     repositories_collection = db["codex_repositories"]
     files_collection = db["codex_files"]
+    notifications_collection  = db["codex_notifications"]
 
     
 

@@ -211,7 +211,6 @@ function addSidebarClickHandlers() {
     });
 }
 
-
 async function loadRecentActivities() {
     const activityList = document.getElementById('recentActivityList');
     if (!activityList) return;
