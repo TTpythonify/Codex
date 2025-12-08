@@ -315,7 +315,6 @@ def run_code():
 
 
 
-
 @repo_routes.route("/create_folder", methods=["POST"])
 def create_folder():
     try:
@@ -339,7 +338,11 @@ def create_folder():
         user_resp = github.get("/user")
         if not user_resp.ok:
             return jsonify({"error": "Failed to fetch GitHub user details"}), 401
-        github_username = user_resp.json()["login"]
+        
+        github_user_data = user_resp.json()
+        github_username = github_user_data["login"]
+        github_id = github_user_data["id"]
+        
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
             return jsonify({"error": "User not found"}), 404
@@ -350,7 +353,15 @@ def create_folder():
         except Exception:
             return jsonify({"error": "Invalid repository ID"}), 400
 
-        repo_doc = repositories_collection.find_one({"_id": repo_obj_id, "user_id": user_doc["_id"]})
+        # ✅ Check if user is OWNER or MEMBER
+        repo_doc = repositories_collection.find_one({
+            "_id": repo_obj_id,
+            "$or": [
+                {"user_id": user_doc["_id"]},  # User is owner
+                {"members": github_id}          # User is member
+            ]
+        })
+        
         if not repo_doc:
             return jsonify({"error": "Repository not found or access denied"}), 404
 
@@ -364,8 +375,7 @@ def create_folder():
                 return jsonify({"error": "Invalid parent ID"}), 400
             parent_doc = files_collection.find_one({
                 "_id": parent_obj_id,
-                "repo_id": repo_doc["_id"],
-                "user_id": user_doc["_id"]
+                "repo_id": repo_doc["_id"]
             })
             if not parent_doc or parent_doc.get("type") != "folder":
                 return jsonify({"error": "Parent must be a valid folder"}), 400
@@ -456,7 +466,11 @@ def create_file():
         user_resp = github.get("/user")
         if not user_resp.ok:
             return jsonify({"error": "Failed to fetch GitHub user details"}), 401
-        github_username = user_resp.json()["login"]
+        
+        github_user_data = user_resp.json()
+        github_username = github_user_data["login"]
+        github_id = github_user_data["id"]
+        
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
             return jsonify({"error": "User not found"}), 404
@@ -467,7 +481,15 @@ def create_file():
         except Exception:
             return jsonify({"error": "Invalid repository ID"}), 400
 
-        repo_doc = repositories_collection.find_one({"_id": repo_obj_id, "user_id": user_doc["_id"]})
+        # ✅ Check if user is OWNER or MEMBER
+        repo_doc = repositories_collection.find_one({
+            "_id": repo_obj_id,
+            "$or": [
+                {"user_id": user_doc["_id"]},  # User is owner
+                {"members": github_id}          # User is member
+            ]
+        })
+        
         if not repo_doc:
             return jsonify({"error": "Repository not found or access denied"}), 404
 
@@ -481,8 +503,7 @@ def create_file():
                 return jsonify({"error": "Invalid parent ID"}), 400
             parent_doc = files_collection.find_one({
                 "_id": parent_obj_id,
-                "repo_id": repo_doc["_id"],
-                "user_id": user_doc["_id"]
+                "repo_id": repo_doc["_id"]
             })
             if not parent_doc or parent_doc.get("type") != "folder":
                 return jsonify({"error": "Parent must be a valid folder"}), 400
@@ -521,7 +542,6 @@ int main() {
     // Code goes here
     return 0;
 }"""
-
         elif language == "cpp":
             content = """#include <iostream>
 
@@ -529,11 +549,6 @@ int main() {
     // code goes here
     return 0;
 }"""
-
-
-
-
-#include <stdio.h>
 
         # 11. Insert into DB
         file_doc = {
@@ -552,6 +567,7 @@ int main() {
         insert_result = files_collection.insert_one(file_doc)
         saved_file = files_collection.find_one({"_id": insert_result.inserted_id})
         saved_file_serialized = serialize_doc(saved_file)
+        
         log_activity(
             user_doc["_id"],
             "create_file",
@@ -603,24 +619,34 @@ def get_files(repo_id):
         if not user_resp.ok:
             print("[DEBUG] Failed to fetch user details from GitHub")
             return jsonify({"error": "Failed to fetch user details"}), 401
-        github_username = user_resp.json()["login"]
+        
+        github_user_data = user_resp.json()
+        github_username = github_user_data["login"]
+        github_id = github_user_data["id"]
+        
         # Step 4: Find user in database
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
             print("[DEBUG] User not found in database")
             return jsonify({"error": "User not found"}), 404
-        print(f"[DEBUG] Found user document: {user_doc['_id']}")
+        print(f"[DEBUG] Found user document: {user_doc['_id']}, GitHub ID: {github_id}")
         
-        # Step 5: Verify repository exists and belongs to user or a member
+        # Step 5: ✅ Verify repository exists and user is OWNER or MEMBER
         repo_doc = repositories_collection.find_one({
             "_id": repo_obj_id,
-            "user_id": user_doc["_id"]
+            "$or": [
+                {"user_id": user_doc["_id"]},  # User is owner
+                {"members": github_id}          # User is member (using GitHub ID)
+            ]
         })
         
         if not repo_doc:
-            print("[DEBUG] Repository not found or does not belong to user")
-            return jsonify({"error": "Repository not found"}), 404
+            print(f"[DEBUG] Repository not found or user {github_username} (GitHub ID: {github_id}) doesn't have access")
+            print(f"[DEBUG] Checking - Owner ID: {repo_doc.get('user_id') if repo_doc else 'N/A'}, Members: {repo_doc.get('members', []) if repo_doc else 'N/A'}")
+            return jsonify({"error": "Repository not found or access denied"}), 404
+        
         print(f"[DEBUG] Found repository: {repo_doc['_id']}")
+        print(f"[DEBUG] User has access - Owner: {repo_doc.get('user_id') == user_doc['_id']}, Member: {github_id in repo_doc.get('members', [])}")
         
         # Step 6: Fetch ALL items (files AND folders) for this repository
         items_cursor = files_collection.find({"repo_id": repo_doc["_id"]})

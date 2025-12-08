@@ -80,10 +80,12 @@ function useCardDataForModal(repoId) {
     const card = document.querySelector(`[data-repo-id="${repoId}"]`);
     if (!card) return;
 
+    
     const repoName = card.querySelector('.repo-name').textContent;
     const repoDescription = card.querySelector('.repo-description').textContent;
     const repoCreated = card.querySelector('.repo-time').textContent;
-
+    
+   
     currentRepoData = {
         _id: repoId,
         name: repoName,
@@ -111,8 +113,11 @@ function populateModalWithRepoData(data) {
     document.getElementById('modalRepoVisibility').textContent = 
         data.private ? 'Private' : 'Public';
     document.getElementById('modalRepoCreated').textContent = data.created_at;
+    
+    // Use the correct members_count from backend
     document.getElementById('modalRepoMembers').textContent = 
-        data.members ? data.members.length : 0;
+        data.members_count || data.members?.length || 0;
+    
     document.getElementById('modalRepoFiles').textContent = 
         data.files_count || 0;
 

@@ -4,9 +4,7 @@ from .database import *
 import logging
 import datetime
 from bson import ObjectId
-
-
-
+from .repository.routes import log_activity
 
 
 main_routes = Blueprint("main", __name__)
@@ -90,7 +88,7 @@ def home():
             })
             user_doc = user_collection.find_one({"_id": insert_result.inserted_id})
 
-        # ✅ Fetch all repos where user is owner or member
+        # Fetch all repos where user is owner or member
         repos_cursor = repositories_collection.find({
             "$or": [
                 {"owner_github_id": github_id},  # Owned repos
@@ -207,18 +205,45 @@ def get_repo_details(repo_id):
         if not repo:
             return jsonify({"error": "Repository not found"}), 404
 
+        # Get owner information
         owner = user_collection.find_one({"_id": repo.get("user_id")})
-        files_count = files_collection.count_documents({"repo_id": ObjectId(repo_id)})
         
-        # Get members (if you have a members collection)
-        # For now, just include the owner
+        # Count files in repository
+        files_count = files_collection.count_documents({
+            "repo_id": ObjectId(repo_id),
+            "type": "file"  # Only count files, not folders
+        })
+        
+        # Get member GitHub IDs from repo
+        member_github_ids = repo.get("members", [])
+        
+        # Fetch member details from user collection
         members = []
+        
+        # Add owner first
         if owner:
             members.append({
                 "username": owner.get("username"),
                 "avatar_url": owner.get("avatar_url"),
+                "github_id": owner.get("github_id"),
                 "role": "Owner"
             })
+        
+        # Add other members
+        if member_github_ids:
+            member_users = user_collection.find({
+                "github_id": {"$in": member_github_ids}
+            })
+            
+            for member_user in member_users:
+                # Don't duplicate owner
+                if member_user.get("github_id") != owner.get("github_id"):
+                    members.append({
+                        "username": member_user.get("username"),
+                        "avatar_url": member_user.get("avatar_url"),
+                        "github_id": member_user.get("github_id"),
+                        "role": "Member"
+                    })
 
         # Format response
         repo_details = {
@@ -227,8 +252,10 @@ def get_repo_details(repo_id):
             "description": repo.get("description", "No description provided"),
             "private": repo.get("private", False),
             "owner": owner.get("username") if owner else "Unknown",
+            "owner_avatar": owner.get("avatar_url") if owner else None,
             "created_at": repo.get("created_at").strftime("%Y-%m-%d") if repo.get("created_at") else "Unknown",
             "members": members,
+            "members_count": len(members),  
             "files_count": files_count
         }
 
@@ -236,6 +263,8 @@ def get_repo_details(repo_id):
 
     except Exception as e:
         logger.error(f"Error fetching repository details: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -283,6 +312,15 @@ def join_repository(repo_id):
             {"_id": ObjectId(repo_id)},
             {"$push": {"members": github_id}}
         )
+        log_activity(
+            user_doc["_id"],
+            "join_repo",
+            f"Joined repository '{repo['name']}'",
+            f"{user_doc['username']} joined the repository {repo['name']}",
+            repo_id=repo["_id"],
+            repo_name=repo["name"]
+        )
+
 
         # For now, just create a notification 
         # You can store join requests in a separate collection #
@@ -304,9 +342,6 @@ def join_repository(repo_id):
         return jsonify({"error": "Internal server error"}), 500
 
     
-
-
-
 
 
 @main_routes.route("/activity_feed")
