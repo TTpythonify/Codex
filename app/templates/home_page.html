@@ -12,8 +12,70 @@
             <div class="nav-left">
                 <a href="{{ url_for('main.home') }}" class="logo">CODEX</a>
             </div>
+            <!-- Replace the nav-right section in home_page.html with this -->
             <div class="nav-right">
                 <div class="user-menu">
+                    <!-- Notification Bell -->
+                    <div class="notification-wrapper">
+                        <button class="notification-btn" id="notificationBtn">
+                            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 16a2 2 0 001.985-1.75c.017-.137-.097-.25-.235-.25h-3.5c-.138 0-.252.113-.235.25A2 2 0 008 16z"/>
+                                <path d="M8 1.5A3.5 3.5 0 004.5 5v2.947c0 .346-.102.683-.294.97l-1.703 2.556a.018.018 0 00-.003.01l.001.006c0 .002.002.004.004.006a.017.017 0 00.006.004l.007.001h10.964l.007-.001a.016.016 0 00.006-.004.016.016 0 00.004-.006l.001-.007a.017.017 0 00-.003-.01l-1.703-2.554a1.75 1.75 0 01-.294-.97V5A3.5 3.5 0 008 1.5zM3 5a5 5 0 0110 0v2.947c0 .05.015.098.042.139l1.703 2.555A1.518 1.518 0 0113.482 13H2.518a1.518 1.518 0 01-1.263-2.36l1.703-2.554A.25.25 0 003 7.947V5z"/>
+                            </svg>
+                            <!-- Notification Badge - shows when there are notifications -->
+                            <span class="notification-badge" id="notificationBadge">3</span>
+                        </button>
+                        
+                        <!-- Notification Dropdown -->
+                        <div class="notification-dropdown" id="notificationDropdown">
+                            <div class="notification-header">
+                                <h3>Notifications</h3>
+                                <button class="mark-all-read" id="markAllRead">Mark all as read</button>
+                            </div>
+                            <div class="notification-list" id="notificationList">
+                                <!-- Sample notifications - replace with dynamic content -->
+                                <div class="notification-item unread">
+                                    <div class="notification-icon new-member">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                            <path d="M10.5 5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm.061 3.073a4 4 0 10-5.123 0 6.004 6.004 0 00-3.431 5.142.75.75 0 001.498.07 4.5 4.5 0 018.99 0 .75.75 0 101.498-.07 6.005 6.005 0 00-3.432-5.142z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="notification-content">
+                                        <p><strong>John Doe</strong> was added to <strong>Project Alpha</strong></p>
+                                        <span class="notification-time">2 hours ago</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="notification-item unread">
+                                    <div class="notification-icon commit">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                            <path d="M11.93 8.5a4.002 4.002 0 01-7.86 0H.75a.75.75 0 010-1.5h3.32a4.002 4.002 0 017.86 0h3.32a.75.75 0 010 1.5h-3.32zM8 6a2 2 0 100 4 2 2 0 000-4z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="notification-content">
+                                        <p>New commit in <strong>my-repo</strong></p>
+                                        <span class="notification-time">5 hours ago</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="notification-item">
+                                    <div class="notification-icon file">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                            <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25V1.75z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="notification-content">
+                                        <p><strong>Sarah</strong> created a new file in <strong>docs</strong></p>
+                                        <span class="notification-time">1 day ago</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="notification-footer">
+                                <a href="#">View all notifications</a>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <img src="{{ user.avatar_url }}" alt="Avatar" class="user-avatar">
                     <span class="username">{{ user.username }}</span>
                     <div class="dropdown">

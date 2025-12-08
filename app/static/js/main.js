@@ -91,6 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     addRepoClickHandlers();
+    addSidebarClickHandlers();
+    initializeNotifications();
 });
 
 // Function to add a new repository card to the grid
@@ -307,7 +309,176 @@ if (document.getElementById('recentActivityList')) {
     loadRecentActivities();
 }
 
-// Call it on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    addSidebarClickHandlers();
-});
+// ==========================================
+// NOTIFICATION BELL FUNCTIONALITY
+// ==========================================
+
+function initializeNotifications() {
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationDropdown = document.getElementById('notificationDropdown');
+    const notificationBadge = document.getElementById('notificationBadge');
+    const markAllRead = document.getElementById('markAllRead');
+    
+    if (!notificationBtn) return;
+    
+    // Toggle notification dropdown
+    notificationBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        notificationDropdown.classList.toggle('active');
+        notificationBtn.classList.toggle('active');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!notificationBtn.contains(e.target) && !notificationDropdown.contains(e.target)) {
+            notificationDropdown.classList.remove('active');
+            notificationBtn.classList.remove('active');
+        }
+    });
+    
+    // Mark all as read
+    if (markAllRead) {
+        markAllRead.addEventListener('click', () => {
+            markAllNotificationsAsRead();
+        });
+    }
+    
+    // Add click handlers to notification items
+    const notificationItems = document.querySelectorAll('.notification-item');
+    notificationItems.forEach(item => {
+        item.addEventListener('click', () => {
+            markNotificationAsRead(item);
+            // You can add navigation logic here
+        });
+    });
+}
+
+function markAllNotificationsAsRead() {
+    const notificationItems = document.querySelectorAll('.notification-item.unread');
+    notificationItems.forEach(item => {
+        item.classList.remove('unread');
+    });
+    updateNotificationBadge();
+    
+    // TODO: Send request to backend to mark all as read
+    // fetch('/notifications/mark_all_read', { method: 'POST' })
+    //     .then(response => response.json())
+    //     .then(data => console.log('All notifications marked as read'))
+    //     .catch(error => console.error('Error:', error));
+}
+
+function markNotificationAsRead(notificationItem) {
+    notificationItem.classList.remove('unread');
+    updateNotificationBadge();
+    
+    // TODO: Send request to backend to mark specific notification as read
+    // const notificationId = notificationItem.dataset.notificationId;
+    // fetch(`/notifications/${notificationId}/read`, { method: 'POST' })
+    //     .then(response => response.json())
+    //     .then(data => console.log('Notification marked as read'))
+    //     .catch(error => console.error('Error:', error));
+}
+
+function updateNotificationBadge() {
+    const notificationBadge = document.getElementById('notificationBadge');
+    if (!notificationBadge) return;
+    
+    const unreadCount = document.querySelectorAll('.notification-item.unread').length;
+    
+    if (unreadCount > 0) {
+        notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        notificationBadge.classList.remove('hidden');
+    } else {
+        notificationBadge.classList.add('hidden');
+    }
+}
+
+// Function to add a new notification dynamically (you can call this from your backend)
+function addNotification(notification) {
+    const notificationList = document.getElementById('notificationList');
+    if (!notificationList) return;
+    
+    // Remove empty state if exists
+    const emptyState = notificationList.querySelector('.notification-empty');
+    if (emptyState) {
+        emptyState.remove();
+    }
+    
+    const notificationItem = document.createElement('div');
+    notificationItem.className = 'notification-item unread';
+    if (notification.id) {
+        notificationItem.dataset.notificationId = notification.id;
+    }
+    
+    // Determine icon based on notification type
+    let iconClass = 'file';
+    let iconSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25V1.75z"/>
+    </svg>`;
+    
+    if (notification.type === 'member') {
+        iconClass = 'new-member';
+        iconSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M10.5 5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm.061 3.073a4 4 0 10-5.123 0 6.004 6.004 0 00-3.431 5.142.75.75 0 001.498.07 4.5 4.5 0 018.99 0 .75.75 0 101.498-.07 6.005 6.005 0 00-3.432-5.142z"/>
+        </svg>`;
+    } else if (notification.type === 'commit') {
+        iconClass = 'commit';
+        iconSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.93 8.5a4.002 4.002 0 01-7.86 0H.75a.75.75 0 010-1.5h3.32a4.002 4.002 0 017.86 0h3.32a.75.75 0 010 1.5h-3.32zM8 6a2 2 0 100 4 2 2 0 000-4z"/>
+        </svg>`;
+    }
+    
+    notificationItem.innerHTML = `
+        <div class="notification-icon ${iconClass}">
+            ${iconSvg}
+        </div>
+        <div class="notification-content">
+            <p>${notification.message}</p>
+            <span class="notification-time">${notification.time}</span>
+        </div>
+    `;
+    
+    // Add click handler
+    notificationItem.addEventListener('click', () => {
+        markNotificationAsRead(notificationItem);
+    });
+    
+    // Insert at the top of the list
+    notificationList.insertBefore(notificationItem, notificationList.firstChild);
+    
+    // Update badge
+    updateNotificationBadge();
+}
+
+// Function to load notifications from backend
+async function loadNotifications() {
+    try {
+        // TODO: Replace with your actual endpoint
+        // const response = await fetch('/api/notifications');
+        // const data = await response.json();
+        
+        // Example: Process notifications
+        // if (data.notifications) {
+        //     const notificationList = document.getElementById('notificationList');
+        //     notificationList.innerHTML = '';
+        //     
+        //     data.notifications.forEach(notification => {
+        //         addNotification(notification);
+        //     });
+        //     
+        //     updateNotificationBadge();
+        // }
+    } catch (error) {
+        console.error('Error loading notifications:', error);
+    }
+}
+
+// Example: Simulate receiving a notification (REMOVE THIS IN PRODUCTION)
+// setTimeout(() => {
+//     addNotification({
+//         id: '123',
+//         type: 'member',
+//         message: '<strong>Alice</strong> joined <strong>Your Project</strong>',
+//         time: 'Just now'
+//     });
+// }, 3000);
