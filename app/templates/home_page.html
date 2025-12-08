@@ -186,8 +186,10 @@
     </div>
 
     <script>
+    window.currentGithubId = "{{ current_github_id }}";
     const currentUsername = "{{ user.username }}";
 </script>
+
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>

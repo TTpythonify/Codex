@@ -568,7 +568,7 @@ async function loadFileTree(repoId) {
     try {
         const response = await fetch(`/get_files/${repoId}`);
         const data = await response.json();
-        
+        console.log(data)
         if (response.ok) {
             displayFileTree(data.files);
         } else {

@@ -90,11 +90,11 @@ def home():
             })
             user_doc = user_collection.find_one({"_id": insert_result.inserted_id})
 
-        # Fetch all repos where user is owner or member
+        # ✅ Fetch all repos where user is owner or member
         repos_cursor = repositories_collection.find({
             "$or": [
                 {"owner_github_id": github_id},  # Owned repos
-                {"members": github_id}           # Joined repos
+                {"members": github_id}           # Joined repos (checking GitHub ID)
             ]
         }).sort("created_at", -1)
 
@@ -114,16 +114,19 @@ def home():
 
             repos.append(repo)
         
-        # Debug print
-        print("Repos for user:", repos)
+        # Debug logging
+        logger.info(f"User {github_username} (ID: {github_id}) has access to {len(repos)} repos")
+        for repo in repos:
+            logger.info(f"  - {repo['name']} (Owner: {repo['is_owner']}, Members: {repo['members']})")
 
-        # Render template with user and repos
-        return render_template("home_page.html", user=user_doc, repos=repos)
+        # Pass github_id to template
+        return render_template("home_page.html", user=user_doc, repos=repos, current_github_id=github_id)
 
     except Exception as e:
         logger.error(f"Error fetching or saving user data: {e}")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for("main.login_page"))
-
 
 
 

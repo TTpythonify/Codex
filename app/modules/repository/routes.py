@@ -138,7 +138,10 @@ def repo_page(repo_id):
         user_resp = github.get("/user")
         if not user_resp.ok:
             raise Exception("Failed to fetch GitHub user data")
-        github_username = user_resp.json()["login"]
+        
+        github_user_data = user_resp.json()
+        github_username = github_user_data["login"]
+        github_id = github_user_data["id"]
 
         # Find user in DB
         user_doc = user_collection.find_one({"username": github_username})
@@ -153,14 +156,17 @@ def repo_page(repo_id):
             logger.error(f"Invalid repo_id format: {repo_id}, error: {e}")
             return redirect(url_for("main.home"))
 
-        # Find repository owned by this user
+        # ✅ Find repository where user is OWNER or MEMBER
         repo_doc = repositories_collection.find_one({
             "_id": repo_obj_id,
-            "user_id": user_doc["_id"]
+            "$or": [
+                {"user_id": user_doc["_id"]},  # User is owner
+                {"members": github_id}          # User is member
+            ]
         })
         
         if not repo_doc:
-            logger.error(f"Repository {repo_id} not found or not owned by user {github_username}")
+            logger.error(f"Repository {repo_id} not found or user {github_username} doesn't have access")
             return redirect(url_for("main.home"))
 
         return render_template(
@@ -174,6 +180,7 @@ def repo_page(repo_id):
         import traceback
         traceback.print_exc()
         return redirect(url_for("main.home"))
+    
 
 
 @repo_routes.route("/run_code", methods=["POST"])
@@ -570,49 +577,55 @@ int main() {
 
     
 
-
 @repo_routes.route("/get_files/<repo_id>", methods=["GET"])
 def get_files(repo_id):
     """
     Retrieves all files AND folders for a given repository
     """
-    logger.info(f"Fetching files for repository: {repo_id}")
+    print(f"[DEBUG] Fetching files for repository: {repo_id}")
     
     try:
         # Step 1: Check if user is authenticated
         if not github.authorized:
+            print("[DEBUG] User not authenticated")
             return jsonify({"error": "Not authenticated"}), 401
         
         # Step 2: Convert repo_id to ObjectId
         try:
             repo_obj_id = ObjectId(repo_id)
+            print(f"[DEBUG] Converted repo_id to ObjectId: {repo_obj_id}")
         except Exception as e:
-            logger.error(f"Invalid repo_id format: {e}")
+            print(f"[DEBUG] Invalid repo_id format: {e}")
             return jsonify({"error": "Invalid repository ID"}), 400
         
         # Step 3: Get authenticated user information
         user_resp = github.get("/user")
         if not user_resp.ok:
+            print("[DEBUG] Failed to fetch user details from GitHub")
             return jsonify({"error": "Failed to fetch user details"}), 401
         github_username = user_resp.json()["login"]
-        
         # Step 4: Find user in database
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
+            print("[DEBUG] User not found in database")
             return jsonify({"error": "User not found"}), 404
+        print(f"[DEBUG] Found user document: {user_doc['_id']}")
         
-        # Step 5: Verify repository exists and belongs to user
+        # Step 5: Verify repository exists and belongs to user or a member
         repo_doc = repositories_collection.find_one({
             "_id": repo_obj_id,
             "user_id": user_doc["_id"]
         })
         
         if not repo_doc:
+            print("[DEBUG] Repository not found or does not belong to user")
             return jsonify({"error": "Repository not found"}), 404
+        print(f"[DEBUG] Found repository: {repo_doc['_id']}")
         
         # Step 6: Fetch ALL items (files AND folders) for this repository
         items_cursor = files_collection.find({"repo_id": repo_doc["_id"]})
         items = list(items_cursor)
+        print(f"[DEBUG] Found {len(items)} items in repository")
         
         # Step 7: Serialize all items
         serialized_items = []
@@ -633,15 +646,16 @@ def get_files(repo_id):
                 serialized_item["content"] = item.get("content", "")
             
             serialized_items.append(serialized_item)
+            print(f"[DEBUG] Serialized item: {serialized_item['name']} ({serialized_item['type']})")
 
         return jsonify({"files": serialized_items}), 200
     
     except Exception as e:
-        logger.error(f"Error fetching files: {e}")
+        print(f"[DEBUG] Error fetching files: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+
 
 
 

@@ -126,21 +126,20 @@ function addRepoToGrid(repo) {
         </div>
     `;
 
-    // Add click handler respecting owner/member
+    // Add click handler
     repoCard.addEventListener('click', () => {
         const isOwner = repoCard.getAttribute('data-is-owner') === 'true';
         const members = JSON.parse(repoCard.getAttribute('data-members') || '[]');
-        const currentUsername = "{{ user.username }}"; // passed from Jinja
+        const currentGithubId = window.currentGithubId;
 
-        if (!isOwner && !members.includes(currentUsername)) {
-            alert("You do not have access to this repository.");
-            return;
-        }
+        console.log('Repo clicked:', repo.name);
+        console.log('Is owner:', isOwner);
+        console.log('Members array:', members);
+        console.log('Current GitHub ID:', currentGithubId);
+        console.log('Has access:', isOwner || members.includes(currentGithubId));
 
-        if (repo.private && !isOwner) {
-            alert("You are a member of this private repository. Some actions may be restricted.");
-        }
-
+        // If you see the repo on this page, you have access (it was filtered server-side)
+        // So we can just navigate directly
         window.location.href = `/repo/${repo._id}`;
     });
 
@@ -154,28 +153,28 @@ function addRepoClickHandlers() {
         const repoId = card.getAttribute('data-repo-id');
         const isOwner = card.getAttribute('data-is-owner') === 'true';
         const members = JSON.parse(card.getAttribute('data-members') || '[]');
-        const currentUsername = "{{ user.username }}";
+        const currentGithubId = window.currentGithubId;
+
+        console.log('Setting up click handler for repo:', repoId);
+        console.log('Is owner:', isOwner);
+        console.log('Members:', members);
+        console.log('Current GitHub ID:', currentGithubId);
 
         if (repoId && repoId !== '0') {
             card.style.cursor = 'pointer';
             card.addEventListener('click', () => {
-                if (!isOwner && !members.includes(currentUsername)) {
-                    alert("You do not have access to this repository.");
-                    return;
-                }
-
-                const isPrivate = card.querySelector('.repo-footer .stat')?.textContent.includes('Private');
-                if (isPrivate && !isOwner) {
-                    alert("You are a member of this private repository. Some actions may be restricted.");
-                }
-
+                console.log('Repo card clicked:', repoId);
+                console.log('Checking access...');
+                console.log('Is owner:', isOwner);
+                console.log('Members includes user:', members.includes(currentGithubId));
+                
+                // Since the server already filtered repos to only show ones the user has access to,
+                // we can safely navigate without additional checks
                 window.location.href = `/repo/${repoId}`;
             });
         }
     });
 }
-
-
 
 
 // Add click handlers for sidebar project items
@@ -209,7 +208,6 @@ function addSidebarClickHandlers() {
         });
     });
 }
-
 
 
 async function loadRecentActivities() {
