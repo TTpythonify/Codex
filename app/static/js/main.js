@@ -96,6 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Function to add a new repository card to the grid
+// Replace the addRepoToGrid function in main.js
+
 function addRepoToGrid(repo) {
     const reposGrid = document.getElementById('reposGrid');
     
@@ -103,7 +105,7 @@ function addRepoToGrid(repo) {
     const noReposCard = reposGrid.querySelector('[data-repo-id="0"]');
     if (noReposCard) noReposCard.remove();
 
-    // Create new repo card
+    // Create new repo card with enhanced structure
     const repoCard = document.createElement('div');
     repoCard.className = 'repo-card';
     repoCard.setAttribute('data-repo-id', repo._id);
@@ -111,18 +113,28 @@ function addRepoToGrid(repo) {
     repoCard.setAttribute('data-members', JSON.stringify(repo.members || []));
     repoCard.style.cursor = 'pointer';
 
+    const badgeHTML = repo.is_owner 
+        ? '<span class="badge owner-badge">Owner</span>' 
+        : '<span class="badge member-badge">Member</span>';
+    
+    const visibilityHTML = repo.private 
+        ? '<span class="visibility-indicator private">🔒 Private</span>'
+        : '<span class="visibility-indicator public">🔓 Public</span>';
+
     repoCard.innerHTML = `
         <div class="repo-header">
-            <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
-            </svg>
-            <h3 class="repo-name">${repo.name}</h3>
-            ${repo.is_owner ? '<span class="badge owner-badge">Owner</span>' : '<span class="badge member-badge">Member</span>'}
+            <div class="repo-title-section">
+                <svg class="repo-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8z"/>
+                </svg>
+                <h3 class="repo-name">${repo.name}</h3>
+            </div>
+            ${badgeHTML}
         </div>
         <p class="repo-description">${repo.description || 'No description provided'}</p>
         <div class="repo-footer">
             <div class="repo-stats">
-                <span class="stat">${repo.private ? '🔒 Private' : '🔓 Public'}</span>
+                ${visibilityHTML}
             </div>
             <span class="repo-time">${repo.created_at}</span>
         </div>
@@ -130,18 +142,6 @@ function addRepoToGrid(repo) {
 
     // Add click handler
     repoCard.addEventListener('click', () => {
-        const isOwner = repoCard.getAttribute('data-is-owner') === 'true';
-        const members = JSON.parse(repoCard.getAttribute('data-members') || '[]');
-        const currentGithubId = window.currentGithubId;
-
-        console.log('Repo clicked:', repo.name);
-        console.log('Is owner:', isOwner);
-        console.log('Members array:', members);
-        console.log('Current GitHub ID:', currentGithubId);
-        console.log('Has access:', isOwner || members.includes(currentGithubId));
-
-        // If you see the repo on this page, you have access (it was filtered server-side)
-        // So we can just navigate directly
         window.location.href = `/repo/${repo._id}`;
     });
 
@@ -320,11 +320,21 @@ function initializeNotifications() {
     
     if (!notificationBtn) return;
     
-    // Toggle notification dropdown
+    // Load notifications initially to get count
+    loadNotifications();
+    
+    // Toggle notification dropdown and load notifications
     notificationBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        const wasActive = notificationDropdown.classList.contains('active');
+        
         notificationDropdown.classList.toggle('active');
         notificationBtn.classList.toggle('active');
+        
+        // Load notifications when opening dropdown
+        if (!wasActive) {
+            loadNotifications();
+        }
     });
     
     // Close dropdown when clicking outside
@@ -341,42 +351,9 @@ function initializeNotifications() {
             markAllNotificationsAsRead();
         });
     }
-    
-    // Add click handlers to notification items
-    const notificationItems = document.querySelectorAll('.notification-item');
-    notificationItems.forEach(item => {
-        item.addEventListener('click', () => {
-            markNotificationAsRead(item);
-            // You can add navigation logic here
-        });
-    });
 }
 
-function markAllNotificationsAsRead() {
-    const notificationItems = document.querySelectorAll('.notification-item.unread');
-    notificationItems.forEach(item => {
-        item.classList.remove('unread');
-    });
-    updateNotificationBadge();
-    
-    // TODO: Send request to backend to mark all as read
-    // fetch('/notifications/mark_all_read', { method: 'POST' })
-    //     .then(response => response.json())
-    //     .then(data => console.log('All notifications marked as read'))
-    //     .catch(error => console.error('Error:', error));
-}
 
-function markNotificationAsRead(notificationItem) {
-    notificationItem.classList.remove('unread');
-    updateNotificationBadge();
-    
-    // TODO: Send request to backend to mark specific notification as read
-    // const notificationId = notificationItem.dataset.notificationId;
-    // fetch(`/notifications/${notificationId}/read`, { method: 'POST' })
-    //     .then(response => response.json())
-    //     .then(data => console.log('Notification marked as read'))
-    //     .catch(error => console.error('Error:', error));
-}
 
 function updateNotificationBadge() {
     const notificationBadge = document.getElementById('notificationBadge');
@@ -449,35 +426,170 @@ function addNotification(notification) {
     updateNotificationBadge();
 }
 
-// Function to load notifications from backend
 async function loadNotifications() {
+    const notificationList = document.getElementById('notificationList');
+    if (!notificationList) return;
+    
     try {
-        // TODO: Replace with your actual endpoint
-        // const response = await fetch('/api/notifications');
-        // const data = await response.json();
+        const response = await fetch('/api/notifications');
+        const data = await response.json();
         
-        // Example: Process notifications
-        // if (data.notifications) {
-        //     const notificationList = document.getElementById('notificationList');
-        //     notificationList.innerHTML = '';
-        //     
-        //     data.notifications.forEach(notification => {
-        //         addNotification(notification);
-        //     });
-        //     
-        //     updateNotificationBadge();
-        // }
+        if (response.ok && data.notifications && data.notifications.length > 0) {
+            notificationList.innerHTML = '';
+            
+            data.notifications.forEach(notification => {
+                const notificationElement = createNotificationElement(notification);
+                notificationList.appendChild(notificationElement);
+            });
+            
+            updateNotificationBadge();
+        } else {
+            // Show empty state
+            notificationList.innerHTML = `
+                <div class="notification-empty">
+                    <svg width="48" height="48" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 16a2 2 0 001.985-1.75c.017-.137-.097-.25-.235-.25h-3.5c-.138 0-.252.113-.235.25A2 2 0 008 16z"/>
+                        <path d="M8 1.5A3.5 3.5 0 004.5 5v2.947c0 .346-.102.683-.294.97l-1.703 2.556a.018.018 0 00-.003.01l.001.006c0 .002.002.004.004.006a.017.017 0 00.006.004l.007.001h10.964l.007-.001a.016.016 0 00.006-.004.016.016 0 00.004-.006l.001-.007a.017.017 0 00-.003-.01l-1.703-2.554a1.75 1.75 0 01-.294-.97V5A3.5 3.5 0 008 1.5zM3 5a5 5 0 0110 0v2.947c0 .05.015.098.042.139l1.703 2.555A1.518 1.518 0 0113.482 13H2.518a1.518 1.518 0 01-1.263-2.36l1.703-2.554A.25.25 0 003 7.947V5z"/>
+                    </svg>
+                    <h4>No Notifications</h4>
+                    <p>You're all caught up!</p>
+                </div>
+            `;
+            
+            // Hide badge if no notifications
+            const notificationBadge = document.getElementById('notificationBadge');
+            if (notificationBadge) {
+                notificationBadge.classList.add('hidden');
+            }
+        }
     } catch (error) {
         console.error('Error loading notifications:', error);
+        notificationList.innerHTML = `
+            <div class="notification-empty">
+                <h4>Unable to load notifications</h4>
+                <p>Please refresh the page to try again</p>
+            </div>
+        `;
     }
 }
 
-// Example: Simulate receiving a notification (REMOVE THIS IN PRODUCTION)
-// setTimeout(() => {
-//     addNotification({
-//         id: '123',
-//         type: 'member',
-//         message: '<strong>Alice</strong> joined <strong>Your Project</strong>',
-//         time: 'Just now'
-//     });
-// }, 3000);
+
+function createNotificationElement(notification) {
+    const div = document.createElement('div');
+    div.className = `notification-item ${notification.read ? '' : 'unread'}`;
+    div.dataset.notificationId = notification.id;
+    
+    // Determine icon based on notification type
+    let iconClass = 'file';
+    let iconSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25V1.75z"/>
+    </svg>`;
+    
+    if (notification.type === 'member_joined') {
+        iconClass = 'new-member';
+        iconSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M10.5 5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm.061 3.073a4 4 0 10-5.123 0 6.004 6.004 0 00-3.431 5.142.75.75 0 001.498.07 4.5 4.5 0 018.99 0 .75.75 0 101.498-.07 6.005 6.005 0 00-3.432-5.142z"/>
+        </svg>`;
+    } else if (notification.type === 'commit') {
+        iconClass = 'commit';
+        iconSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.93 8.5a4.002 4.002 0 01-7.86 0H.75a.75.75 0 010-1.5h3.32a4.002 4.002 0 017.86 0h3.32a.75.75 0 010 1.5h-3.32zM8 6a2 2 0 100 4 2 2 0 000-4z"/>
+        </svg>`;
+    }
+    
+    // Format time
+    const timeAgo = formatTimeAgo(notification.created_at);
+    
+    div.innerHTML = `
+        <div class="notification-icon ${iconClass}">
+            ${iconSvg}
+        </div>
+        <div class="notification-content">
+            <p>${notification.message}</p>
+            <span class="notification-time">${timeAgo}</span>
+        </div>
+    `;
+    
+    // Add click handler
+    div.addEventListener('click', async () => {
+        // Mark as read
+        await markNotificationAsRead(div);
+        
+        // Navigate based on type
+        if (notification.type === 'member_joined' && notification.repo_id) {
+            window.location.href = `/repo/${notification.repo_id}`;
+        }
+    });
+    
+    return div;
+}
+
+function formatTimeAgo(dateString) {
+    if (!dateString) return 'Recently';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60
+    };
+    
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const interval = Math.floor(seconds / secondsInUnit);
+        if (interval >= 1) {
+            return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+        }
+    }
+    
+    return 'Just now';
+}
+
+async function markAllNotificationsAsRead() {
+    try {
+        const response = await fetch('/api/notifications/mark_all_read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            // Update UI
+            const notificationItems = document.querySelectorAll('.notification-item.unread');
+            notificationItems.forEach(item => {
+                item.classList.remove('unread');
+            });
+            updateNotificationBadge();
+        }
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+    }
+}
+
+async function markNotificationAsRead(notificationItem) {
+    const notificationId = notificationItem.dataset.notificationId;
+    if (!notificationId) return;
+    
+    try {
+        const response = await fetch(`/api/notifications/${notificationId}/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            notificationItem.classList.remove('unread');
+            updateNotificationBadge();
+        }
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+

@@ -334,12 +334,6 @@ def join_repository(repo_id):
 
         notifications_collection.insert_one(notification_details)
 
-        # You can store join requests in a separate collection #
-        # join_requests_collection.insert_one({ # "repo_id": ObjectId(repo_id), # 
-        # "user_id": user_doc["_id"], # "status": "pending", 
-        # "created_at": datetime.datetime.utcnow() # })
-
-
         return jsonify({
             "message": "Joined repository successfully",
             "repo_name": repo["name"]
@@ -415,3 +409,123 @@ def logout():
 @main_routes.route("/authorized")
 def authorized():
     return redirect(url_for("main.home"))
+
+
+
+
+@main_routes.route("/api/notifications")
+def get_notifications():
+    """Fetch notifications for the authenticated user"""
+    if not github.authorized:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Get current user
+        resp = github.get("/user")
+        if not resp.ok:
+            return jsonify({"error": "Failed to fetch user data"}), 400
+        
+        user_data = resp.json()
+        github_id = user_data['id']
+        
+        # Find user in DB
+        user_doc = user_collection.find_one({"github_id": github_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Fetch notifications for this user (sorted by newest first)
+        notifications_cursor = notifications_collection.find({
+            "user_id": user_doc["_id"]
+        }).sort("created_at", -1).limit(50)  # Limit to 50 most recent
+        
+        notifications = []
+        for notification in notifications_cursor:
+            notifications.append({
+                "id": str(notification["_id"]),
+                "type": notification.get("type"),
+                "message": notification.get("message"),
+                "repo_id": str(notification.get("repo_id")) if notification.get("repo_id") else None,
+                "created_at": notification.get("created_at").isoformat() if notification.get("created_at") else None,
+                "read": notification.get("read", False)
+            })
+        
+        return jsonify({"notifications": notifications}), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching notifications: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@main_routes.route("/api/notifications/<notification_id>/read", methods=["POST"])
+def mark_notification_read(notification_id):
+    """Mark a specific notification as read"""
+    if not github.authorized:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Get current user
+        resp = github.get("/user")
+        if not resp.ok:
+            return jsonify({"error": "Failed to fetch user data"}), 400
+        
+        user_data = resp.json()
+        github_id = user_data['id']
+        
+        user_doc = user_collection.find_one({"github_id": github_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Mark notification as read
+        result = notifications_collection.update_one(
+            {
+                "_id": ObjectId(notification_id),
+                "user_id": user_doc["_id"]
+            },
+            {"$set": {"read": True}}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({"message": "Notification marked as read"}), 200
+        else:
+            return jsonify({"error": "Notification not found or already read"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error marking notification as read: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@main_routes.route("/api/notifications/mark_all_read", methods=["POST"])
+def mark_all_notifications_read():
+    """Mark all notifications as read for the authenticated user"""
+    if not github.authorized:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Get current user
+        resp = github.get("/user")
+        if not resp.ok:
+            return jsonify({"error": "Failed to fetch user data"}), 400
+        
+        user_data = resp.json()
+        github_id = user_data['id']
+        
+        user_doc = user_collection.find_one({"github_id": github_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Mark all notifications as read
+        result = notifications_collection.update_many(
+            {"user_id": user_doc["_id"], "read": False},
+            {"$set": {"read": True}}
+        )
+        
+        return jsonify({
+            "message": "All notifications marked as read",
+            "count": result.modified_count
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error marking all notifications as read: {e}")
+        return jsonify({"error": "Internal server error"}), 500
