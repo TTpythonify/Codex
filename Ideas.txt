@@ -1,6 +1,8 @@
-Add notification to the homepage, so users can see who joins their rooms.
+Add notification to the homepage, so users can see who joins their rooms.  DONE
+
+
 Rooms has collab section to see whose there. only the owner of the room can remove people. 
-Public repo. people can click on it and then request to join
+Public repo. people can click on it and then request to join  . DONE
 chat logs. shows what who edited what and where 
 Delete/rename of files.
-
+Owners can change the room from private to public and vice versa
