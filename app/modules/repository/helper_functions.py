@@ -1,5 +1,7 @@
 import re
 import redis
+import bson
+
 
 redis_client = redis.Redis(
     host="localhost",
@@ -7,6 +9,19 @@ redis_client = redis.Redis(
     db=0,
     decode_responses=True
 )
+
+
+def convert_objectids(obj):
+    """Recursively convert all ObjectIds in a dict/list to strings."""
+    if isinstance(obj, list):
+        return [convert_objectids(o) for o in obj]
+    elif isinstance(obj, dict):
+        return {k: convert_objectids(v) for k, v in obj.items()}
+    elif isinstance(obj, bson.ObjectId):
+        return str(obj)
+    else:
+        return obj
+
 
 def to_java_class_name(filename):
     # remove .java if user included it

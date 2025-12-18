@@ -3,8 +3,10 @@ from flask_dance.contrib.github import github
 from .database import *
 import logging
 import datetime
+import json
 from bson import ObjectId
 from .repository.routes import log_activity
+from .repository.helper_functions import *
 
 
 main_routes = Blueprint("main", __name__)
@@ -42,7 +44,6 @@ def test_oauth():
         })
 
 
-
 @main_routes.route("/home")
 def home():
     logger.info("Accessing home page...")
@@ -62,10 +63,9 @@ def home():
         session["username"] = github_username
         session["github_id"] = github_id
 
-        # Check if user exists in DB
+        # Check/create/update user in DB
         existing_user = user_collection.find_one({"github_id": github_id})
         if existing_user:
-            # Update user info
             user_collection.update_one(
                 {"github_id": github_id},
                 {"$set": {
@@ -77,7 +77,6 @@ def home():
             )
             user_doc = user_collection.find_one({"github_id": github_id})
         else:
-            # Insert new user
             insert_result = user_collection.insert_one({
                 "github_id": github_id,
                 "username": github_username,
@@ -88,43 +87,62 @@ def home():
             })
             user_doc = user_collection.find_one({"_id": insert_result.inserted_id})
 
-        # Fetch all repos where user is owner or member
-        repos_cursor = repositories_collection.find({
-            "$or": [
-                {"owner_github_id": github_id},  # Owned repos
-                {"members": github_id}           # Joined repos (checking GitHub ID)
-            ]
-        }).sort("created_at", -1)
+        # 🔹 Redis caching for per-user repos
+        redis_key = f"homepage:user:{github_id}:repos"
+        cached_repos = redis_client.get(redis_key)
+        if cached_repos:
+            repos = json.loads(cached_repos)
+            logger.info(f"Repos loaded from Redis cache for user {github_username}")
 
-        repos = []
-        for repo in repos_cursor:
-            # Flag to indicate ownership
-            repo["is_owner"] = repo.get("owner_github_id") == github_id
-            repo["members"] = repo.get("members", [])
-            # Convert ObjectId to string
-            repo["_id"] = str(repo["_id"])
+        else:
+            repos_cursor = repositories_collection.find({
+                "$or": [
+                    {"owner_github_id": github_id},
+                    {"members": github_id}
+                ]
+            }).sort("created_at", -1)
 
-            # Format dates for display
-            if isinstance(repo.get("created_at"), datetime.datetime):
-                repo["created_at"] = repo["created_at"].strftime("%Y-%m-%d")
-            if isinstance(repo.get("updated_at"), datetime.datetime):
-                repo["updated_at"] = repo["updated_at"].strftime("%Y-%m-%d")
+            repos = []
+            for repo in repos_cursor:
+                repo["is_owner"] = repo.get("owner_github_id") == github_id
+                repo["members"] = repo.get("members", [])
+                repo["_id"] = str(repo["_id"])  # convert repo _id
 
-            repos.append(repo)
-        
+                # If there’s a parent_id or nested ObjectId
+                if repo.get("parent_id"):
+                    repo["parent_id"] = str(repo["parent_id"])
+
+                if isinstance(repo.get("created_at"), datetime.datetime):
+                    repo["created_at"] = repo["created_at"].strftime("%Y-%m-%d")
+                if isinstance(repo.get("updated_at"), datetime.datetime):
+                    repo["updated_at"] = repo["updated_at"].strftime("%Y-%m-%d")
+
+                repos.append(repo)
+
+
+            # Cache repos in Redis for 2 minutes
+            repos_to_cache = convert_objectids(repos)
+            redis_client.setex(redis_key, 120, json.dumps(repos_to_cache))
+
+            logger.info(f"Repos cached in Redis for user {github_username}")
+
         # Debug logging
         logger.info(f"User {github_username} (ID: {github_id}) has access to {len(repos)} repos")
-        for repo in repos:
-            logger.info(f"  - {repo['name']} (Owner: {repo['is_owner']}, Members: {repo['members']})")
 
-        # Pass github_id to template
-        return render_template("home_page.html", user=user_doc, repos=repos, current_github_id=github_id)
+        return render_template(
+            "home_page.html",
+            user=user_doc,
+            repos=repos,
+            current_github_id=github_id
+        )
 
     except Exception as e:
         logger.error(f"Error fetching or saving user data: {e}")
         import traceback
         traceback.print_exc()
         return redirect(url_for("main.login_page"))
+
+
 
 
 

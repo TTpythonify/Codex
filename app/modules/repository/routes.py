@@ -131,7 +131,6 @@ def create_repo():
 # -----------------------------
 @repo_routes.route("/repo/<repo_id>")
 def repo_page(repo_id):
-    print("==================================================================================================")
     if not github.authorized:
         return redirect(url_for("main.login_page"))
 
