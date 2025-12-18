@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request,render_template,redirect,url_for
 from flask_dance.contrib.github import github
+from .helper_functions import *
+
 from ..database import *
 import logging
 import requests
@@ -127,9 +129,9 @@ def create_repo():
 # -----------------------------
 # Access a repository page
 # -----------------------------
-
 @repo_routes.route("/repo/<repo_id>")
 def repo_page(repo_id):
+    print("==================================================================================================")
     if not github.authorized:
         return redirect(url_for("main.login_page"))
 
@@ -149,25 +151,48 @@ def repo_page(repo_id):
             logger.error(f"User {github_username} not found in database")
             return redirect(url_for("main.home"))
 
-        # Convert repo_id to ObjectId - ADD VALIDATION HERE
+        # Validate repo_id
         try:
             repo_obj_id = ObjectId(repo_id)
         except Exception as e:
             logger.error(f"Invalid repo_id format: {repo_id}, error: {e}")
             return redirect(url_for("main.home"))
 
-        # ✅ Find repository where user is OWNER or MEMBER
-        repo_doc = repositories_collection.find_one({
-            "_id": repo_obj_id,
-            "$or": [
-                {"user_id": user_doc["_id"]},  # User is owner
-                {"members": github_id}          # User is member
-            ]
-        })
-        
-        if not repo_doc:
-            logger.error(f"Repository {repo_id} not found or user {github_username} doesn't have access")
-            return redirect(url_for("main.home"))
+        redis_key = f"repo:{repo_id}:details"
+
+
+        cached_repo = redis_client.get(redis_key)
+        if cached_repo:
+            logger.info(f"Repo {repo_id} loaded from Redis")
+            repo_doc = json.loads(cached_repo)
+        else:
+            # 🗄️ 2. Fetch from MongoDB (with permission check)
+            repo_doc = repositories_collection.find_one({
+                "_id": repo_obj_id,
+                "$or": [
+                    {"user_id": user_doc["_id"]},
+                    {"members": github_id}
+                ]
+            })
+
+            if not repo_doc:
+                logger.error(
+                    f"Repository {repo_id} not found or user {github_username} doesn't have access"
+                )
+                return redirect(url_for("main.home"))
+
+            # Convert ObjectId to string for Redis
+            repo_doc["_id"] = str(repo_doc["_id"])
+
+            # ⏱️ 3. Save to Redis (2 minutes)
+            redis_client.setex(
+                redis_key,
+                120,
+                json.dumps(repo_doc, default=str)
+            )
+            print("==================================================================================================")
+
+            
 
         return render_template(
             "code_editor.html",
@@ -180,6 +205,7 @@ def repo_page(repo_id):
         import traceback
         traceback.print_exc()
         return redirect(url_for("main.home"))
+
     
 
 
@@ -511,7 +537,6 @@ def create_file():
 
         # 7. Adjust filename for Java
         if language == "java":
-            from .helper_functions import to_java_class_name
             class_name = to_java_class_name(file_name)
             file_name = f"{class_name}.java"
 
@@ -592,13 +617,14 @@ int main() {
 
 
     
-
 @repo_routes.route("/get_files/<repo_id>", methods=["GET"])
 def get_files(repo_id):
     """
     Retrieves all files AND folders for a given repository
+    with Redis caching for faster response.
     """
     print(f"[DEBUG] Fetching files for repository: {repo_id}")
+    print("==================================================================================================")
     
     try:
         # Step 1: Check if user is authenticated
@@ -627,33 +653,39 @@ def get_files(repo_id):
         # Step 4: Find user in database
         user_doc = user_collection.find_one({"username": github_username})
         if not user_doc:
-            print("[DEBUG] User not found in database")
             return jsonify({"error": "User not found"}), 404
         print(f"[DEBUG] Found user document: {user_doc['_id']}, GitHub ID: {github_id}")
         
-        # Step 5: ✅ Verify repository exists and user is OWNER or MEMBER
+        # Step 5: Verify repository exists and user is OWNER or MEMBER
         repo_doc = repositories_collection.find_one({
             "_id": repo_obj_id,
             "$or": [
                 {"user_id": user_doc["_id"]},  # User is owner
-                {"members": github_id}          # User is member (using GitHub ID)
+                {"members": github_id}          # User is member
             ]
         })
         
         if not repo_doc:
             print(f"[DEBUG] Repository not found or user {github_username} (GitHub ID: {github_id}) doesn't have access")
-            print(f"[DEBUG] Checking - Owner ID: {repo_doc.get('user_id') if repo_doc else 'N/A'}, Members: {repo_doc.get('members', []) if repo_doc else 'N/A'}")
             return jsonify({"error": "Repository not found or access denied"}), 404
         
         print(f"[DEBUG] Found repository: {repo_doc['_id']}")
         print(f"[DEBUG] User has access - Owner: {repo_doc.get('user_id') == user_doc['_id']}, Member: {github_id in repo_doc.get('members', [])}")
         
-        # Step 6: Fetch ALL items (files AND folders) for this repository
+        # Step 6: 🔥 Check Redis cache for repo tree
+        redis_key = f"repo:{repo_id}:tree"
+        cached_tree = redis_client.get(redis_key)
+
+        if cached_tree:
+            print("[DEBUG] Files loaded from Redis cache")
+            return jsonify({"files": json.loads(cached_tree)}), 200
+
+        # Step 7: Fetch ALL items (files AND folders) from MongoDB
         items_cursor = files_collection.find({"repo_id": repo_doc["_id"]})
         items = list(items_cursor)
         print(f"[DEBUG] Found {len(items)} items in repository")
-        
-        # Step 7: Serialize all items
+
+        # Step 8: Serialize items
         serialized_items = []
         for item in items:
             serialized_item = {
@@ -665,22 +697,32 @@ def get_files(repo_id):
                 "created_at": item.get("created_at").isoformat() if item.get("created_at") else None,
                 "updated_at": item.get("updated_at").isoformat() if item.get("updated_at") else None
             }
-            
-            # Add file-specific fields only for files
+
             if item.get("type") == "file":
                 serialized_item["language"] = item.get("language", "")
                 serialized_item["content"] = item.get("content", "")
-            
+
             serialized_items.append(serialized_item)
             print(f"[DEBUG] Serialized item: {serialized_item['name']} ({serialized_item['type']})")
 
+        # Step 9: Cache serialized items in Redis for 60 seconds
+        redis_client.setex(
+            redis_key,
+            60,
+            json.dumps(serialized_items)
+        )
+        print("==================================================================================================")
+
+        print("[DEBUG] Files cached in Redis")
+
         return jsonify({"files": serialized_items}), 200
-    
+
     except Exception as e:
         print(f"[DEBUG] Error fetching files: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 
 
