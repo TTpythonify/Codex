@@ -1,14 +1,10 @@
 import re
 import redis
 import bson
+import os
+import redis
 
-
-redis_client = redis.Redis(
-    host="localhost",
-    port=6379,
-    db=0,
-    decode_responses=True
-)
+redis_client = redis.from_url("redis://default:finZXitukyORlhwWXzgCzpXZBPbNdlPP@redis.railway.internal:6379")
 
 
 def convert_objectids(obj):
