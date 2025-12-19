@@ -15,7 +15,8 @@ def create_app():
     github_bp = make_github_blueprint(
         client_id=os.environ.get("GITHUB_CLIENT_ID"),
         client_secret=os.environ.get("GITHUB_CLIENT_SECRET"),
-        scope="repo"
+        scope="repo",
+        redirect_url="https://codex-production1.up.railway.app/login/github/authorized"  # <-- ADD THIS
     )
     app.register_blueprint(github_bp, url_prefix="/login")
     app.register_blueprint(main_routes)
